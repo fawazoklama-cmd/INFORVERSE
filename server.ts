@@ -217,7 +217,9 @@ app.post('/api/contact', rateLimit(10, 60_000), (req, res) => {
 
 app.get('/robots.txt', (req, res) => {
   const baseUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
-  res.type('text/plain').send(`User-agent: *\nAllow: /\nDisallow: /admin\n\nSitemap: ${baseUrl}/sitemap.xml\n`);
+  res
+    .type('text/plain')
+    .send(`User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /admim\n\nSitemap: ${baseUrl}/sitemap.xml\n`);
 });
 
 app.get('/sitemap.xml', (req, res) => {
@@ -269,14 +271,10 @@ app.get('/rss.xml', (req, res) => {
 // ADMIN AUTH ROUTES
 // ========================
 
-app.get('/api/admin/auth/status', (req, res) => {
-  const envConfigured = Boolean(process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD);
-  const localClaimed = Boolean(dbStore.getAdminCredential());
-  const supabaseConfigured = Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
+app.get('/api/admin/auth/status', (_req, res) => {
   res.json({
-    needsInitialSetup: !envConfigured && !localClaimed && !supabaseConfigured,
-    supabaseConfigured,
-    envConfigured,
+    firebaseConfigured: true,
+    envConfigured: Boolean(process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD),
   });
 });
 
@@ -366,26 +364,23 @@ app.post('/api/admin/auth/login', rateLimit(15, 60_000), (req, res) => {
   res.json({ token, admin: { email: stored.email, role: stored.role } });
 });
 
-app.post('/api/admin/auth/forgot-password', rateLimit(5, 60_000), (req, res) => {
-  const { email } = req.body as { email?: string };
-  if (!email) {
-    res.status(400).json({ error: 'Email is required.' });
-    return;
-  }
-  if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    res.json({
-      message: 'Use Supabase Authentication password recovery in your Supabase project or client Auth.',
-    });
-    return;
-  }
+app.post('/api/admin/auth/forgot-password', rateLimit(5, 60_000), (_req, res) => {
   res.json({
-    message:
-      'For server-managed admin accounts, update ADMIN_PASSWORD in your environment variables / Settings -> Secrets and restart the server.',
+    message: 'Password reset emails are dispatched directly by Firebase Authentication.',
   });
 });
 
 app.get('/api/admin/me', requireAdmin, (req: AuthenticatedRequest, res) => {
   res.json({ admin: req.admin });
+});
+
+app.get('/api/admin/integrations-status', requireAdmin, (_req, res) => {
+  const stats = dbStore.getDashboardStats();
+  res.json({
+    integrations: stats.integrations,
+    totalVisitors: stats.totalVisitors,
+    newsletterSubscribers: stats.newsletterSubscribers,
+  });
 });
 
 // ========================
@@ -592,9 +587,26 @@ app.post('/api/admin/automation/settings', requireAdmin, (req, res) => {
   res.json({ automationSettings: updated });
 });
 
-app.post('/api/admin/automation/run', requireAdmin, async (_req, res) => {
+app.post('/api/admin/automation/run', requireAdmin, async (req, res) => {
+  const payload = req.body as {
+    sources?: Source[];
+    existingTitles?: string[];
+    existingUrls?: string[];
+  };
+  if (Array.isArray(payload?.sources)) {
+    for (const s of payload.sources) {
+      dbStore.upsertSource(s);
+    }
+  }
+  const beforeIds = new Set(dbStore.getArticles(true).map((a) => a.id));
   const summary = await runAutomatedCollection();
-  res.json(summary);
+  const importedArticles = dbStore.getArticles(true).filter((a) => !beforeIds.has(a.id));
+  const updatedSources = dbStore.getSources();
+  res.json({
+    ...summary,
+    importedArticles,
+    updatedSources,
+  });
 });
 
 app.post('/api/admin/website/settings', requireAdmin, (req, res) => {

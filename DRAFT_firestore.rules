@@ -1,0 +1,573 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Global Safety Net (Default Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 2. Global Security Primitives
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isBootstrappedAdmin() {
+      return isVerifiedUser() && request.auth.token.email == 'fawazoklama@gmail.com';
+    }
+
+    function isAdmin() {
+      return isVerifiedUser() && (
+        isBootstrappedAdmin() ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isOptionalString(data, key, maxLen) {
+      return !(key in data) || data[key] == null || (data[key] is string && data[key].size() <= maxLen);
+    }
+
+    function isValidStringList(data, key, maxItems) {
+      return !(key in data) || (
+        data[key] is list &&
+        data[key].size() <= maxItems &&
+        (data[key].size() == 0 || data[key][0] is string)
+      );
+    }
+
+    // 3. Entity Validation Blueprints (Anti-Update-Gap)
+    function isValidArticle(data) {
+      return data.keys().hasAll([
+        'id', 'title', 'slug', 'summary', 'content', 'categoryId', 'countryId',
+        'language', 'status', 'isAutomatic', 'isVerified', 'viewCount',
+        'publishedAt', 'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'id', 'title', 'subtitle', 'slug', 'summary', 'content', 'imageUrl',
+        'imageCaption', 'categoryId', 'countryId', 'regionId', 'province',
+        'sourceId', 'sourceUrl', 'sourceName', 'language', 'tags', 'author',
+        'articleType', 'requiresVerification', 'isVerified', 'status',
+        'isAutomatic', 'isFeatured', 'viewCount', 'seoTitle', 'seoDescription',
+        'publishedAt', 'createdAt', 'updatedAt'
+      ]) &&
+      isValidId(data.id) &&
+      data.title is string && data.title.size() >= 3 && data.title.size() <= 300 &&
+      isOptionalString(data, 'subtitle', 500) &&
+      data.slug is string && data.slug.size() >= 2 && data.slug.size() <= 220 && data.slug.matches('^[a-z0-9\\-]+$') &&
+      data.summary is string && data.summary.size() >= 10 && data.summary.size() <= 2000 &&
+      data.content is string && data.content.size() >= 10 && data.content.size() <= 60000 &&
+      isOptionalString(data, 'imageUrl', 1000) &&
+      isOptionalString(data, 'imageCaption', 500) &&
+      isValidId(data.categoryId) &&
+      isValidId(data.countryId) &&
+      isOptionalString(data, 'regionId', 128) &&
+      isOptionalString(data, 'province', 120) &&
+      isOptionalString(data, 'sourceId', 128) &&
+      isOptionalString(data, 'sourceUrl', 1000) &&
+      isOptionalString(data, 'sourceName', 200) &&
+      data.language in ['en', 'id'] &&
+      isValidStringList(data, 'tags', 15) &&
+      isOptionalString(data, 'author', 160) &&
+      (!('articleType' in data) || data.articleType in ['original', 'ai_summary', 'editorial']) &&
+      (!('requiresVerification' in data) || data.requiresVerification is bool) &&
+      data.isVerified is bool &&
+      data.status in ['draft', 'scheduled', 'published', 'archived'] &&
+      data.isAutomatic is bool &&
+      (!('isFeatured' in data) || data.isFeatured is bool) &&
+      data.viewCount is number && data.viewCount >= 0 &&
+      data.publishedAt is string && data.publishedAt.size() <= 64 &&
+      isOptionalString(data, 'seoTitle', 250) &&
+      isOptionalString(data, 'seoDescription', 400) &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidArticleTranslation(data) {
+      return data.keys().hasAll([
+        'id', 'articleId', 'language', 'translatedTitle',
+        'translatedSummary', 'translatedContent', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'id', 'articleId', 'language', 'translatedTitle', 'translatedSubtitle',
+        'translatedSummary', 'translatedContent', 'isAiTranslated', 'status', 'updatedAt'
+      ]) &&
+      isValidId(data.id) &&
+      isValidId(data.articleId) &&
+      data.language in ['en', 'id'] &&
+      data.translatedTitle is string && data.translatedTitle.size() >= 2 && data.translatedTitle.size() <= 300 &&
+      isOptionalString(data, 'translatedSubtitle', 500) &&
+      data.translatedSummary is string && data.translatedSummary.size() >= 5 && data.translatedSummary.size() <= 2000 &&
+      data.translatedContent is string && data.translatedContent.size() >= 5 && data.translatedContent.size() <= 60000 &&
+      (!('isAiTranslated' in data) || data.isAiTranslated is bool) &&
+      (!('status' in data) || data.status in ['draft', 'published']) &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidCategory(data) {
+      return data.keys().hasAll(['id', 'name', 'slug', 'isActive', 'createdAt']) &&
+        data.keys().hasOnly([
+          'id', 'name', 'nameEn', 'nameId', 'slug', 'description',
+          'descriptionId', 'icon', 'sortOrder', 'isActive', 'createdAt'
+        ]) &&
+        isValidId(data.id) &&
+        data.name is string && data.name.size() >= 2 && data.name.size() <= 100 &&
+        isOptionalString(data, 'nameEn', 100) &&
+        isOptionalString(data, 'nameId', 100) &&
+        data.slug is string && data.slug.size() >= 2 && data.slug.size() <= 100 && data.slug.matches('^[a-z0-9\\-]+$') &&
+        isOptionalString(data, 'description', 500) &&
+        isOptionalString(data, 'descriptionId', 500) &&
+        isOptionalString(data, 'icon', 500) &&
+        (!('sortOrder' in data) || data.sortOrder is number) &&
+        data.isActive is bool &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidCountry(data) {
+      return data.keys().hasAll(['id', 'name', 'code', 'continent', 'isActive']) &&
+        data.keys().hasOnly(['id', 'name', 'nameId', 'code', 'isoNumeric', 'continent', 'flag', 'isActive']) &&
+        isValidId(data.id) &&
+        data.name is string && data.name.size() >= 2 && data.name.size() <= 120 &&
+        isOptionalString(data, 'nameId', 120) &&
+        data.code is string && data.code.size() >= 2 && data.code.size() <= 3 &&
+        isOptionalString(data, 'isoNumeric', 8) &&
+        data.continent in ['Asia', 'Europe', 'Africa', 'North America', 'South America', 'Oceania', 'Antarctica'] &&
+        isOptionalString(data, 'flag', 32) &&
+        data.isActive is bool;
+    }
+
+    function isValidRegion(data) {
+      return data.keys().hasAll(['id', 'name', 'countryId', 'type', 'isActive']) &&
+        data.keys().hasOnly(['id', 'name', 'nameId', 'slug', 'countryId', 'type', 'provinces', 'isActive']) &&
+        isValidId(data.id) &&
+        data.name is string && data.name.size() >= 2 && data.name.size() <= 120 &&
+        isOptionalString(data, 'nameId', 120) &&
+        isOptionalString(data, 'slug', 120) &&
+        isValidId(data.countryId) &&
+        data.type is string && data.type.size() <= 64 &&
+        isValidStringList(data, 'provinces', 20) &&
+        data.isActive is bool;
+    }
+
+    function isValidSource(data) {
+      return data.keys().hasAll(['id', 'name', 'url', 'apiType', 'isActive', 'status', 'createdAt']) &&
+        data.keys().hasOnly([
+          'id', 'name', 'url', 'rssUrl', 'apiType', 'countryId', 'countryCode',
+          'categoryId', 'defaultCategorySlug', 'language', 'isActive',
+          'lastFetchedAt', 'status', 'lastError', 'retryCount', 'createdAt'
+        ]) &&
+        isValidId(data.id) &&
+        data.name is string && data.name.size() >= 2 && data.name.size() <= 160 &&
+        data.url is string && data.url.size() <= 1000 &&
+        isOptionalString(data, 'rssUrl', 1000) &&
+        data.apiType in ['rss', 'news_api', 'government', 'research', 'international_org'] &&
+        isOptionalString(data, 'countryId', 128) &&
+        isOptionalString(data, 'countryCode', 4) &&
+        isOptionalString(data, 'categoryId', 128) &&
+        isOptionalString(data, 'defaultCategorySlug', 100) &&
+        (!('language' in data) || data.language in ['en', 'id']) &&
+        data.isActive is bool &&
+        isOptionalString(data, 'lastFetchedAt', 64) &&
+        data.status in ['idle', 'ok', 'error'] &&
+        isOptionalString(data, 'lastError', 500) &&
+        (!('retryCount' in data) || data.retryCount is number) &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidAutomationSettings(data) {
+      return data.keys().hasAll([
+        'enabled', 'updateInterval', 'autoPublish', 'enableAiSummary',
+        'enableTranslation', 'enableDuplicateDetection', 'maxArticlesPerRun', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'enabled', 'updateInterval', 'autoPublish', 'enableAiSummary',
+        'enableTranslation', 'enableDuplicateDetection', 'maxArticlesPerRun',
+        'aiModel', 'summaryLength', 'aiSystemPrompt', 'maxRetries',
+        'tokenUsageTotal', 'lastRunAt', 'nextRunAt', 'updatedAt'
+      ]) &&
+      data.enabled is bool &&
+      data.updateInterval is number && data.updateInterval >= 5 && data.updateInterval <= 1440 &&
+      data.autoPublish is bool &&
+      data.enableAiSummary is bool &&
+      data.enableTranslation is bool &&
+      data.enableDuplicateDetection is bool &&
+      data.maxArticlesPerRun is number && data.maxArticlesPerRun >= 1 && data.maxArticlesPerRun <= 20 &&
+      isOptionalString(data, 'aiModel', 80) &&
+      (!('summaryLength' in data) || data.summaryLength in ['short', 'medium', 'detailed']) &&
+      isOptionalString(data, 'aiSystemPrompt', 2000) &&
+      (!('maxRetries' in data) || (data.maxRetries is number && data.maxRetries >= 1 && data.maxRetries <= 5)) &&
+      (!('tokenUsageTotal' in data) || data.tokenUsageTotal is number) &&
+      isOptionalString(data, 'lastRunAt', 64) &&
+      isOptionalString(data, 'nextRunAt', 64) &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidAutomationLog(data) {
+      return data.keys().hasAll([
+        'id', 'status', 'articlesFetched', 'articlesPublished', 'startedAt', 'createdAt'
+      ]) &&
+      data.keys().hasOnly([
+        'id', 'sourceId', 'logType', 'status', 'articlesFetched',
+        'articlesPublished', 'errors', 'message', 'startedAt', 'completedAt', 'createdAt'
+      ]) &&
+      isValidId(data.id) &&
+      isOptionalString(data, 'sourceId', 128) &&
+      (!('logType' in data) || data.logType in ['automation', 'fetch_error', 'ai', 'admin']) &&
+      data.status in ['success', 'warning', 'error', 'info'] &&
+      data.articlesFetched is number && data.articlesFetched >= 0 &&
+      data.articlesPublished is number && data.articlesPublished >= 0 &&
+      isValidStringList(data, 'errors', 25) &&
+      isOptionalString(data, 'message', 1000) &&
+      data.startedAt is string && data.startedAt.size() <= 64 &&
+      isOptionalString(data, 'completedAt', 64) &&
+      data.createdAt is timestamp;
+    }
+
+    function isValidWebsiteSettings(data) {
+      return data.keys().hasAll([
+        'websiteName', 'tagline', 'defaultLanguage', 'supportedLanguages', 'theme', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'websiteName', 'tagline', 'logoUrl', 'defaultLanguage', 'supportedLanguages',
+        'theme', 'socialLinks', 'seoSettings', 'homepageSections',
+        'contactEmail', 'footerNote', 'updatedAt'
+      ]) &&
+      data.websiteName is string && data.websiteName.size() >= 2 && data.websiteName.size() <= 100 &&
+      data.tagline is string && data.tagline.size() <= 300 &&
+      isOptionalString(data, 'logoUrl', 1000) &&
+      data.defaultLanguage in ['auto', 'en', 'id'] &&
+      data.supportedLanguages is list && data.supportedLanguages.size() <= 5 && data.supportedLanguages.size() > 0 && data.supportedLanguages[0] is string &&
+      data.theme in ['light', 'dark'] &&
+      (!('socialLinks' in data) || data.socialLinks is map) &&
+      (!('seoSettings' in data) || data.seoSettings is map) &&
+      (!('homepageSections' in data) || data.homepageSections is map) &&
+      isOptionalString(data, 'contactEmail', 160) &&
+      isOptionalString(data, 'footerNote', 400) &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidAdminProfile(data) {
+      return data.keys().hasAll(['uid', 'email', 'displayName', 'role', 'createdAt']) &&
+        data.keys().hasOnly(['uid', 'email', 'displayName', 'role', 'createdAt']) &&
+        isValidId(data.uid) &&
+        data.email is string && data.email.size() <= 160 &&
+        data.displayName is string && data.displayName.size() <= 120 &&
+        data.role in ['super_admin', 'admin', 'editor'] &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidAdminRole(data) {
+      return data.keys().hasAll(['uid', 'role', 'active', 'createdAt']) &&
+        data.keys().hasOnly(['uid', 'role', 'active', 'createdAt']) &&
+        isValidId(data.uid) &&
+        data.role in ['super_admin', 'admin', 'editor'] &&
+        data.active is bool &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidNewsletterSubscriber(data) {
+      return data.keys().hasAll(['id', 'email', 'subscribedAt', 'status']) &&
+        data.keys().hasOnly(['id', 'email', 'language', 'subscribedAt', 'status']) &&
+        isValidId(data.id) &&
+        data.email is string && data.email.size() >= 5 && data.email.size() <= 160 &&
+        (!('language' in data) || data.language in ['en', 'id']) &&
+        data.subscribedAt is timestamp &&
+        data.status in ['active', 'unsubscribed'];
+    }
+
+    function isValidAnalyticsMetric(data) {
+      return data.keys().hasAll(['id', 'totalVisitors', 'totalArticleViews', 'updatedAt']) &&
+        data.keys().hasOnly(['id', 'totalVisitors', 'totalArticleViews', 'updatedAt']) &&
+        isValidId(data.id) &&
+        data.totalVisitors is number && data.totalVisitors >= 0 &&
+        data.totalArticleViews is number && data.totalArticleViews >= 0 &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidContactMessage(data) {
+      return data.keys().hasAll(['id', 'name', 'email', 'message', 'createdAt']) &&
+        data.keys().hasOnly(['id', 'name', 'email', 'subject', 'message', 'createdAt']) &&
+        isValidId(data.id) &&
+        data.name is string && data.name.size() >= 2 && data.name.size() <= 120 &&
+        data.email is string && data.email.size() >= 5 && data.email.size() <= 160 &&
+        isOptionalString(data, 'subject', 200) &&
+        data.message is string && data.message.size() >= 5 && data.message.size() <= 4000 &&
+        data.createdAt is timestamp;
+    }
+
+    // 4. Collection Match Blocks
+    match /articles/{articleId} {
+      allow get: if isValidId(articleId) && (existing().status == 'published' || isAdmin());
+      allow list: if resource.data.status == 'published' || isBootstrappedAdmin();
+      allow create: if isAdmin() &&
+        isValidId(articleId) &&
+        isValidArticle(incoming()) &&
+        incoming().id == articleId &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        exists(/databases/$(database)/documents/categories/$(incoming().categoryId)) &&
+        exists(/databases/$(database)/documents/countries/$(incoming().countryId));
+      allow update: if isAdmin() &&
+        isValidId(articleId) &&
+        isValidArticle(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        exists(/databases/$(database)/documents/categories/$(incoming().categoryId)) &&
+        exists(/databases/$(database)/documents/countries/$(incoming().countryId)) &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'title', 'subtitle', 'slug', 'summary', 'content', 'imageUrl',
+          'imageCaption', 'categoryId', 'countryId', 'regionId', 'province',
+          'sourceId', 'sourceUrl', 'sourceName', 'language', 'tags', 'author',
+          'articleType', 'requiresVerification', 'isVerified', 'status',
+          'isAutomatic', 'isFeatured', 'viewCount', 'seoTitle', 'seoDescription',
+          'publishedAt', 'updatedAt'
+        ]);
+      allow delete: if isAdmin() && isValidId(articleId);
+    }
+
+    match /articleTranslations/{translationId} {
+      allow get: if isValidId(translationId) && (existing().status == 'published' || isAdmin());
+      allow list: if resource.data.status == 'published' || isBootstrappedAdmin();
+      allow create: if isAdmin() &&
+        isValidId(translationId) &&
+        isValidArticleTranslation(incoming()) &&
+        incoming().id == translationId &&
+        incoming().updatedAt == request.time &&
+        exists(/databases/$(database)/documents/articles/$(incoming().articleId));
+      allow update: if isAdmin() &&
+        isValidId(translationId) &&
+        isValidArticleTranslation(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().articleId == existing().articleId &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'language', 'translatedTitle', 'translatedSubtitle', 'translatedSummary',
+          'translatedContent', 'isAiTranslated', 'status', 'updatedAt'
+        ]);
+      allow delete: if isAdmin() && isValidId(translationId);
+    }
+
+    match /categories/{categoryId} {
+      allow get: if isValidId(categoryId) && (existing().isActive == true || isAdmin());
+      allow list: if resource.data.isActive == true || isBootstrappedAdmin();
+      allow create: if isAdmin() &&
+        isValidId(categoryId) &&
+        isValidCategory(incoming()) &&
+        incoming().id == categoryId &&
+        incoming().createdAt == request.time;
+      allow update: if isAdmin() &&
+        isValidId(categoryId) &&
+        isValidCategory(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'name', 'nameEn', 'nameId', 'slug', 'description',
+          'descriptionId', 'icon', 'sortOrder', 'isActive'
+        ]);
+      allow delete: if isAdmin() && isValidId(categoryId);
+    }
+
+    match /countries/{countryId} {
+      allow get: if isValidId(countryId) && (existing().isActive == true || isAdmin());
+      allow list: if resource.data.isActive == true || isBootstrappedAdmin();
+      allow create: if isAdmin() &&
+        isValidId(countryId) &&
+        isValidCountry(incoming()) &&
+        incoming().id == countryId;
+      allow update: if isAdmin() &&
+        isValidId(countryId) &&
+        isValidCountry(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'name', 'nameId', 'code', 'isoNumeric', 'continent', 'flag', 'isActive'
+        ]);
+      allow delete: if isAdmin() && isValidId(countryId);
+    }
+
+    match /regions/{regionId} {
+      allow get: if isValidId(regionId) && (existing().isActive == true || isAdmin());
+      allow list: if resource.data.isActive == true || isBootstrappedAdmin();
+      allow create: if isAdmin() &&
+        isValidId(regionId) &&
+        isValidRegion(incoming()) &&
+        incoming().id == regionId &&
+        exists(/databases/$(database)/documents/countries/$(incoming().countryId));
+      allow update: if isAdmin() &&
+        isValidId(regionId) &&
+        isValidRegion(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'name', 'nameId', 'slug', 'countryId', 'type', 'provinces', 'isActive'
+        ]);
+      allow delete: if isAdmin() && isValidId(regionId);
+    }
+
+    match /sources/{sourceId} {
+      allow get: if isAdmin() && isValidId(sourceId);
+      allow list: if isBootstrappedAdmin();
+      allow create: if isAdmin() &&
+        isValidId(sourceId) &&
+        isValidSource(incoming()) &&
+        incoming().id == sourceId &&
+        incoming().createdAt == request.time;
+      allow update: if isAdmin() &&
+        isValidId(sourceId) &&
+        isValidSource(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'name', 'url', 'rssUrl', 'apiType', 'countryId', 'countryCode',
+          'categoryId', 'defaultCategorySlug', 'language', 'isActive',
+          'lastFetchedAt', 'status', 'lastError', 'retryCount'
+        ]);
+      allow delete: if isAdmin() && isValidId(sourceId);
+    }
+
+    match /automationSettings/{settingId} {
+      allow get: if isAdmin() && isValidId(settingId);
+      allow create: if isAdmin() &&
+        isValidId(settingId) &&
+        isValidAutomationSettings(incoming()) &&
+        incoming().updatedAt == request.time;
+      allow update: if isAdmin() &&
+        isValidId(settingId) &&
+        isValidAutomationSettings(incoming()) &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'enabled', 'updateInterval', 'autoPublish', 'enableAiSummary',
+          'enableTranslation', 'enableDuplicateDetection', 'maxArticlesPerRun',
+          'aiModel', 'summaryLength', 'aiSystemPrompt', 'maxRetries',
+          'tokenUsageTotal', 'lastRunAt', 'nextRunAt', 'updatedAt'
+        ]);
+      allow delete: if false;
+    }
+
+    match /automationLogs/{logId} {
+      allow get: if isAdmin() && isValidId(logId);
+      allow list: if isBootstrappedAdmin();
+      allow create: if isAdmin() &&
+        isValidId(logId) &&
+        isValidAutomationLog(incoming()) &&
+        incoming().id == logId &&
+        incoming().createdAt == request.time;
+      allow update: if false;
+      allow delete: if isAdmin() && isValidId(logId);
+    }
+
+    match /websiteSettings/{settingId} {
+      allow get: if isValidId(settingId);
+      allow create: if isAdmin() &&
+        isValidId(settingId) &&
+        isValidWebsiteSettings(incoming()) &&
+        incoming().updatedAt == request.time;
+      allow update: if isAdmin() &&
+        isValidId(settingId) &&
+        isValidWebsiteSettings(incoming()) &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'websiteName', 'tagline', 'logoUrl', 'defaultLanguage', 'supportedLanguages',
+          'theme', 'socialLinks', 'seoSettings', 'homepageSections',
+          'contactEmail', 'footerNote', 'updatedAt'
+        ]);
+      allow delete: if false;
+    }
+
+    match /adminProfiles/{uid} {
+      allow get: if isValidId(uid) && (isAdmin() || (isVerifiedUser() && request.auth.uid == uid));
+      allow list: if isBootstrappedAdmin();
+      allow create: if isBootstrappedAdmin() &&
+        isValidId(uid) &&
+        isValidAdminProfile(incoming()) &&
+        incoming().uid == uid &&
+        incoming().createdAt == request.time;
+      allow update: if isBootstrappedAdmin() &&
+        isValidId(uid) &&
+        isValidAdminProfile(incoming()) &&
+        incoming().uid == existing().uid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['email', 'displayName', 'role']);
+      allow delete: if isBootstrappedAdmin() && isValidId(uid);
+    }
+
+    match /admins/{uid} {
+      allow get: if isValidId(uid) && (isVerifiedUser() && request.auth.uid == uid || isBootstrappedAdmin());
+      allow create: if isBootstrappedAdmin() &&
+        isValidId(uid) &&
+        isValidAdminRole(incoming()) &&
+        incoming().uid == uid &&
+        incoming().createdAt == request.time;
+      allow update: if isBootstrappedAdmin() &&
+        isValidId(uid) &&
+        isValidAdminRole(incoming()) &&
+        incoming().uid == existing().uid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['role', 'active']);
+      allow delete: if isBootstrappedAdmin() && isValidId(uid);
+    }
+
+    match /newsletterSubscribers/{subscriberId} {
+      allow get: if isAdmin() && isValidId(subscriberId);
+      allow list: if isBootstrappedAdmin();
+      allow create: if isAdmin() &&
+        isValidId(subscriberId) &&
+        isValidNewsletterSubscriber(incoming()) &&
+        incoming().id == subscriberId &&
+        incoming().subscribedAt == request.time;
+      allow update: if isAdmin() &&
+        isValidId(subscriberId) &&
+        isValidNewsletterSubscriber(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().subscribedAt == existing().subscribedAt &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['status', 'language']);
+      allow delete: if isAdmin() && isValidId(subscriberId);
+    }
+
+    match /analytics/{metricId} {
+      allow get: if isAdmin() && isValidId(metricId);
+      allow create: if isAdmin() &&
+        isValidId(metricId) &&
+        isValidAnalyticsMetric(incoming()) &&
+        incoming().id == metricId &&
+        incoming().updatedAt == request.time;
+      allow update: if isAdmin() &&
+        isValidId(metricId) &&
+        isValidAnalyticsMetric(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['totalVisitors', 'totalArticleViews', 'updatedAt']);
+      allow delete: if false;
+    }
+
+    match /contactMessages/{messageId} {
+      allow get: if isAdmin() && isValidId(messageId);
+      allow list: if isBootstrappedAdmin();
+      allow create: if isAdmin() &&
+        isValidId(messageId) &&
+        isValidContactMessage(incoming()) &&
+        incoming().id == messageId &&
+        incoming().createdAt == request.time;
+      allow update: if false;
+      allow delete: if isAdmin() && isValidId(messageId);
+    }
+
+    match /test/{docId} {
+      allow get: if isValidId(docId);
+      allow list, write: if false;
+    }
+  }
+}

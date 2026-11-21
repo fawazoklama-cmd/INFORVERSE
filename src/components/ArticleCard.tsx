@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Bookmark, Globe2 } from 'lucide-react';
 import type { Article } from '../types/inforverse';
 import { useApp } from '../context/AppContext';
@@ -17,6 +17,10 @@ interface ArticleCardProps {
 export function ArticleCard({ article, variant = 'standard' }: ArticleCardProps) {
   const { language, categories, countries, navigate, toggleBookmark, isBookmarked } = useApp();
   const [imgError, setImgError] = useState(false);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [article.image_url]);
 
   const fields = getLocalizedArticleFields(article, language);
   const category = categories.find((c) => c.id === article.category_id);

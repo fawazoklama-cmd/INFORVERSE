@@ -132,6 +132,7 @@ export interface WebsiteSettings {
   id: number;
   site_name: string;
   tagline: string;
+  logo_url?: string;
   default_language: 'auto' | 'en' | 'id';
   default_theme: 'light' | 'dark';
   seo_title: string;
@@ -152,6 +153,14 @@ export interface WebsiteSettings {
   };
 }
 
+export interface AdminProfile {
+  uid: string;
+  email: string;
+  displayName: string;
+  role: 'super_admin' | 'admin' | 'editor';
+  createdAt: string;
+}
+
 export interface AdminDashboardStats {
   totalArticles: number;
   publishedArticles: number;
@@ -163,7 +172,9 @@ export interface AdminDashboardStats {
   failedUpdates: number;
   newsletterSubscribers: number;
   integrations: {
-    supabaseConfigured: boolean;
+    firebaseConfigured: boolean;
+    storageConfigured: boolean;
+    appCheckConfigured: boolean;
     geminiConfigured: boolean;
     newsApiConfigured: boolean;
     newsletterConfigured: boolean;

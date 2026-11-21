@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Search } from 'lucide-react';
 import type { Article } from '../types/inforverse';
 import { useApp } from '../context/AppContext';
 import { ArticleCard } from '../components/ArticleCard';
 import { SkeletonCard } from '../components/SkeletonCard';
+import { loadPublishedArticlesWithFallback } from '../services/firestoreService';
 
 export function SearchPage() {
   const { categories, countries, language, currentPath, addSearchHistory, searchHistory, clearSearchHistory, t } =
@@ -11,52 +12,82 @@ export function SearchPage() {
   const initialParams = new URLSearchParams(currentPath.split('?')[1] || '');
 
   const [query, setQuery] = useState(initialParams.get('q') || '');
+  const [appliedQuery, setAppliedQuery] = useState(initialParams.get('q') || '');
   const [category, setCategory] = useState(initialParams.get('category') || 'all');
   const [country, setCountry] = useState(initialParams.get('country') || 'all');
   const [dateRange, setDateRange] = useState<'all' | '24h' | '7d' | '30d'>('all');
   const [sort, setSort] = useState<'newest' | 'popular'>(
     initialParams.get('sort') === 'popular' ? 'popular' : 'newest'
   );
-  const [articles, setArticles] = useState<Article[]>([]);
+  const [allArticles, setAllArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const p = new URLSearchParams(currentPath.split('?')[1] || '');
-    if (p.has('q')) setQuery(p.get('q') || '');
-    if (p.get('sort') === 'popular') setSort('popular');
+    const nextQ = p.get('q') || '';
+    setQuery(nextQ);
+    setAppliedQuery(nextQ);
+    setSort(p.get('sort') === 'popular' ? 'popular' : 'newest');
   }, [currentPath]);
 
-  const runSearch = async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (query.trim()) params.set('q', query.trim());
-      if (category !== 'all') params.set('category', category);
-      if (country !== 'all') params.set('country', country);
-      params.set('sort', sort);
-      if (dateRange !== 'all') {
-        const days = dateRange === '24h' ? 1 : dateRange === '7d' ? 7 : 30;
-        params.set('dateFrom', new Date(Date.now() - days * 86_400_000).toISOString());
-      }
-      params.set('limit', '60');
-      const res = await fetch(`/api/articles?${params.toString()}`);
-      if (res.ok) {
-        const data = await res.json();
-        setArticles(data.articles || []);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    void runSearch();
-  }, [category, country, dateRange, sort]);
+    const load = async () => {
+      setLoading(true);
+      try {
+        const res = await loadPublishedArticlesWithFallback({ pageSize: 100 });
+        setAllArticles(res.articles);
+      } finally {
+        setLoading(false);
+      }
+    };
+    void load();
+  }, []);
+
+  const articles = useMemo(() => {
+    const q = appliedQuery.trim().toLowerCase();
+    const minTs =
+      dateRange === 'all'
+        ? 0
+        : Date.now() - (dateRange === '24h' ? 1 : dateRange === '7d' ? 7 : 30) * 86_400_000;
+    const catObj = category !== 'all' ? categories.find((c) => c.slug === category) : null;
+    const coObj = country !== 'all' ? countries.find((c) => c.code === country) : null;
+
+    const filtered = allArticles.filter((art) => {
+      if (catObj && art.category_id !== catObj.id) return false;
+      if (coObj && art.country_id !== coObj.id) return false;
+      if (minTs && new Date(art.published_at).getTime() < minTs) return false;
+      if (q) {
+        const haystack = [
+          art.title,
+          art.subtitle,
+          art.summary,
+          art.content,
+          art.source_name,
+          ...(art.tags || []),
+          art.translations?.en?.title || '',
+          art.translations?.en?.summary || '',
+          art.translations?.id?.title || '',
+          art.translations?.id?.summary || '',
+        ]
+          .join(' ')
+          .toLowerCase();
+        if (!haystack.includes(q)) return false;
+      }
+      return true;
+    });
+
+    return filtered.sort((a, b) =>
+      sort === 'popular'
+        ? b.views_count - a.views_count
+        : new Date(b.published_at).getTime() - new Date(a.published_at).getTime()
+    );
+  }, [allArticles, appliedQuery, category, country, dateRange, sort, categories, countries]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (query.trim()) addSearchHistory(query.trim());
-    void runSearch();
+    const clean = query.trim();
+    if (clean) addSearchHistory(clean);
+    setAppliedQuery(clean);
   };
 
   return (
@@ -151,6 +182,7 @@ export function SearchPage() {
                 type="button"
                 onClick={() => {
                   setQuery(item);
+                  setAppliedQuery(item);
                 }}
                 className="rounded-md border border-slate-200 bg-[#F3F5F8] px-2.5 py-1 text-xs text-slate-700 hover:border-[#2878FF] dark:border-slate-700 dark:bg-[#10233F] dark:text-slate-200"
               >

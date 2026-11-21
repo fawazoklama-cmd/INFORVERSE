@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { CheckCircle2, Play, Plus, RefreshCw, Sparkles, Trash2, XCircle } from 'lucide-react';
 import type {
+  Article,
   AutomationLog,
   AutomationSettings,
   Category,
@@ -10,10 +11,23 @@ import type {
   SourceType,
   WebsiteSettings,
 } from '../../types/inforverse';
+import { auth } from '../../lib/firebase';
+import { slugify } from '../../utils/editorial';
+import {
+  addAutomationLogToFirestore,
+  deleteCategoryFromFirestore,
+  deleteSourceFromFirestore,
+  saveArticleToFirestore,
+  saveAutomationSettingsToFirestore,
+  saveCategoryToFirestore,
+  saveCountryToFirestore,
+  saveSourceToFirestore,
+  saveWebsiteSettingsToFirestore,
+} from '../../services/firestoreService';
+import { StorageImageUploader } from './StorageImageUploader';
 
 interface AdminPanelsProps {
   tab: 'automation' | 'sources' | 'categories' | 'countries' | 'ai' | 'settings' | 'logs';
-  token: string;
   sources: Source[];
   categories: Category[];
   countries: Country[];
@@ -27,7 +41,6 @@ interface AdminPanelsProps {
 
 export function AdminPanels({
   tab,
-  token,
   sources,
   categories,
   countries,
@@ -41,10 +54,8 @@ export function AdminPanels({
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
-  // Automation state
   const [autoForm, setAutoForm] = useState<AutomationSettings>(automationSettings);
 
-  // Source form state
   const [sourceName, setSourceName] = useState('');
   const [sourceType, setSourceType] = useState<SourceType>('rss');
   const [sourceUrl, setSourceUrl] = useState('');
@@ -52,31 +63,36 @@ export function AdminPanels({
   const [sourceCat, setSourceCat] = useState('world');
   const [testResults, setTestResults] = useState<Record<string, { ok: boolean; msg: string }>>({});
 
-  // Category form state
   const [catNameEn, setCatNameEn] = useState('');
   const [catNameId, setCatNameId] = useState('');
   const [catDescEn, setCatDescEn] = useState('');
 
-  // Country form state
   const [coCode, setCoCode] = useState('');
   const [coNameEn, setCoNameEn] = useState('');
   const [coNameId, setCoNameId] = useState('');
   const [coContinent, setCoContinent] = useState<ContinentName>('Asia');
 
-  // AI Workbench state
   const [aiTitle, setAiTitle] = useState('');
   const [aiInput, setAiInput] = useState('');
   const [aiOutput, setAiOutput] = useState<Record<string, unknown> | null>(null);
 
-  // Website settings state
   const [siteForm, setSiteForm] = useState<WebsiteSettings>(websiteSettings);
 
+  useEffect(() => {
+    setAutoForm(automationSettings);
+  }, [automationSettings]);
+
+  useEffect(() => {
+    setSiteForm(websiteSettings);
+  }, [websiteSettings]);
+
   const authFetch = async (url: string, options: RequestInit = {}) => {
+    const idToken = await auth.currentUser?.getIdToken();
     const res = await fetch(url, {
       ...options,
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
+        ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
         ...(options.headers || {}),
       },
     });
@@ -88,14 +104,16 @@ export function AdminPanels({
       setBusy(true);
       setNotice(null);
       try {
-        const res = await authFetch('/api/admin/automation/settings', {
-          method: 'POST',
-          body: JSON.stringify(autoForm),
+        await saveAutomationSettingsToFirestore(autoForm);
+        await addAutomationLogToFirestore({
+          logType: 'admin',
+          status: 'info',
+          message: `Updated automation settings (interval: ${autoForm.update_interval_minutes}m, scheduler: ${autoForm.scheduler_enabled ? 'ON' : 'OFF'})`,
         });
-        if (res.ok) {
-          setNotice('Automation configuration saved.');
-          await onRefresh();
-        }
+        setNotice('Automation configuration saved to Cloud Firestore.');
+        await onRefresh();
+      } catch (err) {
+        setNotice(err instanceof Error ? err.message : 'Failed to save automation settings.');
       } finally {
         setBusy(false);
       }
@@ -105,12 +123,43 @@ export function AdminPanels({
       setBusy(true);
       setNotice(null);
       try {
-        const res = await authFetch('/api/admin/automation/run', { method: 'POST' });
+        const res = await authFetch('/api/admin/automation/run', {
+          method: 'POST',
+          body: JSON.stringify({ sources }),
+        });
         const data = await res.json();
+        if (!res.ok) {
+          setNotice(data.error || 'Collection endpoint failed.');
+          return;
+        }
+        const importedArticles = (data.importedArticles || []) as Article[];
+        for (const art of importedArticles) {
+          await saveArticleToFirestore(art, false);
+        }
+        const updatedSources = (data.updatedSources || []) as Source[];
+        for (const src of updatedSources) {
+          if (sources.some((s) => s.id === src.id)) {
+            await saveSourceToFirestore(src, true);
+          }
+        }
+        await saveAutomationSettingsToFirestore({
+          ...autoForm,
+          last_run_at: new Date().toISOString(),
+        });
+        await addAutomationLogToFirestore({
+          logType: 'automation',
+          status: data.errors?.length > 0 && data.importedCount === 0 ? 'warning' : 'success',
+          articlesFetched: data.importedCount || 0,
+          articlesPublished: importedArticles.filter((a) => a.status === 'published').length,
+          errors: data.errors || [],
+          message: `Collection finished: ${data.importedCount} imported to Firestore, ${data.skippedDuplicates} duplicates skipped, ${data.errors?.length || 0} errors.`,
+        });
         setNotice(
-          `Collection complete: ${data.importedCount} imported, ${data.skippedDuplicates} duplicates skipped, ${data.errors?.length || 0} errors.`
+          `Collection complete: ${data.importedCount} imported to Firestore, ${data.skippedDuplicates} duplicates skipped, ${data.errors?.length || 0} errors.`
         );
         await onRefresh();
+      } catch (err) {
+        setNotice(err instanceof Error ? err.message : 'Automated collection failed.');
       } finally {
         setBusy(false);
       }
@@ -123,7 +172,7 @@ export function AdminPanels({
             <div>
               <h2 className="text-lg font-bold text-[#071426] dark:text-white">Automatic Information Pipeline</h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Fetches active RSS feeds & News APIs on schedule, deduplicates, and summarizes via Gemini.
+                Fetches active RSS feeds & News APIs, deduplicates, summarizes via Gemini, and persists to Firestore.
               </p>
             </div>
             <button
@@ -151,7 +200,7 @@ export function AdminPanels({
                 onChange={(e) => setAutoForm({ ...autoForm, scheduler_enabled: e.target.checked })}
                 className="h-4 w-4 accent-[#2878FF]"
               />
-              <span>Enable Background Scheduler</span>
+              <span>Enable Scheduled Cloud Function (Every 30m)</span>
             </label>
 
             <label className="flex items-center gap-2.5 text-sm text-[#071426] dark:text-slate-200">
@@ -236,43 +285,52 @@ export function AdminPanels({
       setBusy(true);
       setNotice(null);
       try {
-        const res = await authFetch('/api/admin/sources', {
-          method: 'POST',
-          body: JSON.stringify({
-            name: sourceName,
-            type: sourceType,
-            url: sourceUrl,
-            country_code: sourceCountry,
-            default_category_slug: sourceCat,
-            is_active: true,
-          }),
-        });
-        const data = await res.json();
-        if (!res.ok) {
-          setNotice(data.error || 'Failed to add source.');
-        } else {
-          setSourceName('');
-          setSourceUrl('');
-          setNotice(`Added source "${data.source.name}".`);
-          await onRefresh();
-        }
+        const newSrc: Source = {
+          id: `src-${Date.now()}`,
+          name: sourceName.trim(),
+          type: sourceType,
+          url: sourceUrl.trim(),
+          country_code: sourceCountry,
+          default_category_slug: sourceCat,
+          language: sourceCountry === 'ID' ? 'id' : 'en',
+          is_active: true,
+          last_fetched_at: null,
+          last_status: 'idle',
+          last_error: null,
+          retry_count: 0,
+          created_at: new Date().toISOString(),
+        };
+        await saveSourceToFirestore(newSrc, false);
+        setSourceName('');
+        setSourceUrl('');
+        setNotice(`Added source "${newSrc.name}" to Firestore.`);
+        await onRefresh();
+      } catch (err) {
+        setNotice(err instanceof Error ? err.message : 'Failed to add source.');
       } finally {
         setBusy(false);
       }
     };
 
     const toggleSource = async (s: Source) => {
-      await authFetch('/api/admin/sources', {
-        method: 'POST',
-        body: JSON.stringify({ ...s, is_active: !s.is_active }),
-      });
+      await saveSourceToFirestore({ ...s, is_active: !s.is_active }, true);
       await onRefresh();
     };
 
     const testSource = async (s: Source) => {
       setTestResults((prev) => ({ ...prev, [s.id]: { ok: true, msg: 'Testing...' } }));
+      await authFetch('/api/admin/sources', { method: 'POST', body: JSON.stringify(s) });
       const res = await authFetch(`/api/admin/sources/${s.id}/test`, { method: 'POST' });
       const data = await res.json();
+      await saveSourceToFirestore(
+        {
+          ...s,
+          last_fetched_at: new Date().toISOString(),
+          last_status: data.ok ? 'ok' : 'error',
+          last_error: data.error || null,
+        },
+        true
+      );
       setTestResults((prev) => ({
         ...prev,
         [s.id]: {
@@ -284,19 +342,19 @@ export function AdminPanels({
     };
 
     const removeSource = async (id: string) => {
-      await authFetch(`/api/admin/sources/${id}`, { method: 'DELETE' });
+      await deleteSourceFromFirestore(id);
       await onRefresh();
     };
 
     return (
       <div className="space-y-6">
         <div className="rounded-xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-[#10233F]/55">
-          <h2 className="text-lg font-bold text-[#071426] dark:text-white">Add Information Source (RSS / News API)</h2>
+          <h2 className="text-lg font-bold text-[#071426] dark:text-white">Add Information Source (Firestore)</h2>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
             NewsAPI Status: {newsApiConfigured ? 'Configured' : 'NEWS_API_KEY unset (RSS feeds work directly without a key)'}
           </p>
 
-          <form onSubmit={addSource} className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <form onSubmit={addSource} className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
             <input
               type="text"
               required
@@ -316,13 +374,37 @@ export function AdminPanels({
               <option value="research">Research Institute</option>
               <option value="international_org">International Org</option>
             </select>
+            <select
+              aria-label="Source Country"
+              value={sourceCountry}
+              onChange={(e) => setSourceCountry(e.target.value)}
+              className="h-10 rounded-lg border border-slate-200 bg-[#F3F5F8] px-3 text-sm text-[#071426] dark:border-slate-700 dark:bg-[#071426] dark:text-white"
+            >
+              {countries.map((c) => (
+                <option key={c.id} value={c.code}>
+                  {c.name_en} ({c.code})
+                </option>
+              ))}
+            </select>
+            <select
+              aria-label="Default Category"
+              value={sourceCat}
+              onChange={(e) => setSourceCat(e.target.value)}
+              className="h-10 rounded-lg border border-slate-200 bg-[#F3F5F8] px-3 text-sm text-[#071426] dark:border-slate-700 dark:bg-[#071426] dark:text-white"
+            >
+              {categories.map((c) => (
+                <option key={c.id} value={c.slug}>
+                  {c.name_en}
+                </option>
+              ))}
+            </select>
             <input
               type="url"
               required
               placeholder="https://example.com/rss.xml"
               value={sourceUrl}
               onChange={(e) => setSourceUrl(e.target.value)}
-              className="h-10 rounded-lg border border-slate-200 bg-[#F3F5F8] px-3 text-sm text-[#071426] dark:border-slate-700 dark:bg-[#071426] dark:text-white lg:col-span-2"
+              className="h-10 rounded-lg border border-slate-200 bg-[#F3F5F8] px-3 text-sm text-[#071426] dark:border-slate-700 dark:bg-[#071426] dark:text-white"
             />
             <button
               type="submit"
@@ -411,17 +493,25 @@ export function AdminPanels({
   if (tab === 'categories') {
     const addCategory = async (e: React.FormEvent) => {
       e.preventDefault();
-      await authFetch('/api/admin/categories', {
-        method: 'POST',
-        body: JSON.stringify({ name_en: catNameEn, name_id: catNameId, description_en: catDescEn }),
-      });
+      const slug = slugify(catNameEn);
+      const newCat: Category = {
+        id: `cat-${slug}-${Date.now().toString().slice(-3)}`,
+        slug,
+        name_en: catNameEn.trim(),
+        name_id: catNameId.trim(),
+        description_en: catDescEn.trim(),
+        description_id: catDescEn.trim(),
+        sort_order: categories.length + 1,
+      };
+      await saveCategoryToFirestore(newCat, false);
       setCatNameEn('');
       setCatNameId('');
       setCatDescEn('');
       await onRefresh();
     };
+
     const deleteCategory = async (id: string) => {
-      await authFetch(`/api/admin/categories/${id}`, { method: 'DELETE' });
+      await deleteCategoryFromFirestore(id);
       await onRefresh();
     };
 
@@ -487,10 +577,17 @@ export function AdminPanels({
   if (tab === 'countries') {
     const addCountry = async (e: React.FormEvent) => {
       e.preventDefault();
-      await authFetch('/api/admin/countries', {
-        method: 'POST',
-        body: JSON.stringify({ code: coCode, name_en: coNameEn, name_id: coNameId, continent: coContinent }),
-      });
+      const code = coCode.toUpperCase().trim().slice(0, 2);
+      const newCo: Country = {
+        id: `co-${code.toLowerCase()}`,
+        code,
+        iso_numeric: '',
+        name_en: coNameEn.trim(),
+        name_id: (coNameId || coNameEn).trim(),
+        continent: coContinent,
+      };
+      const exists = countries.some((c) => c.id === newCo.id);
+      await saveCountryToFirestore(newCo, exists);
       setCoCode('');
       setCoNameEn('');
       setCoNameId('');
@@ -617,11 +714,8 @@ export function AdminPanels({
               <button
                 type="button"
                 onClick={async () => {
-                  await authFetch('/api/admin/automation/settings', {
-                    method: 'POST',
-                    body: JSON.stringify(autoForm),
-                  });
-                  setNotice('AI prompt & summary length saved.');
+                  await saveAutomationSettingsToFirestore(autoForm);
+                  setNotice('AI prompt & summary length saved to Firestore.');
                   await onRefresh();
                 }}
                 className="h-10 rounded-lg bg-[#071426] px-4 text-xs font-semibold text-white hover:bg-[#2878FF] dark:bg-[#2878FF]"
@@ -686,15 +780,18 @@ export function AdminPanels({
     const saveSite = async (e: React.FormEvent) => {
       e.preventDefault();
       setBusy(true);
+      setNotice(null);
       try {
-        const res = await authFetch('/api/admin/website/settings', {
-          method: 'POST',
-          body: JSON.stringify(siteForm),
+        await saveWebsiteSettingsToFirestore(siteForm);
+        await addAutomationLogToFirestore({
+          logType: 'admin',
+          status: 'info',
+          message: 'Updated website settings and branding in Firestore.',
         });
-        if (res.ok) {
-          setNotice('Website settings saved.');
-          await onRefresh();
-        }
+        setNotice('Website settings saved to Cloud Firestore.');
+        await onRefresh();
+      } catch (err) {
+        setNotice(err instanceof Error ? err.message : 'Failed to save website settings.');
       } finally {
         setBusy(false);
       }
@@ -705,7 +802,15 @@ export function AdminPanels({
         onSubmit={saveSite}
         className="space-y-5 rounded-xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-[#10233F]/55"
       >
-        <h2 className="text-lg font-bold text-[#071426] dark:text-white">Website Settings</h2>
+        <h2 className="text-lg font-bold text-[#071426] dark:text-white">Website Settings & Branding</h2>
+
+        <StorageImageUploader
+          folder="branding"
+          currentUrl={siteForm.logo_url || ''}
+          label="INFORVERSE Brand Logo"
+          onChangeUrl={(nextUrl) => setSiteForm({ ...siteForm, logo_url: nextUrl })}
+        />
+
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <label htmlFor="ws-name" className="block text-xs font-semibold text-slate-600 dark:text-slate-300">
@@ -791,7 +896,6 @@ export function AdminPanels({
     );
   }
 
-  // Activity Logs Tab
   return (
     <div className="rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-[#10233F]/55">
       <div className="border-b border-slate-200 px-5 py-4 dark:border-slate-700">

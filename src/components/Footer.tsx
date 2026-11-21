@@ -1,10 +1,18 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { ArrowUp, Instagram, Rss } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { DEFAULT_LOGO_URL } from '../data/baselineCatalog';
 import { sanitizeExternalUrl } from '../utils/editorial';
 
 export function Footer() {
   const { navigate, t, websiteSettings } = useApp();
+  const [logoError, setLogoError] = useState(false);
+  const logoSrc = websiteSettings?.logo_url?.trim() || DEFAULT_LOGO_URL;
+
+  useEffect(() => {
+    setLogoError(false);
+  }, [logoSrc]);
+
   const instagramUrl =
     sanitizeExternalUrl(websiteSettings?.instagram_url || 'https://www.instagram.com/wazzz.dotcom/') ||
     'https://www.instagram.com/wazzz.dotcom/';
@@ -23,9 +31,20 @@ export function Footer() {
             <a
               href="/"
               onClick={(e) => handleNav(e, '/')}
-              className="inline-block text-2xl font-bold tracking-[-0.03em] text-white"
+              className="inline-flex items-center gap-3 text-2xl font-bold tracking-[-0.03em] text-white"
             >
-              INFOR<span className="text-[#2878FF]">VERSE</span>
+              {!logoError && logoSrc ? (
+                <img
+                  src={logoSrc}
+                  alt="INFORVERSE official logo"
+                  onError={() => setLogoError(true)}
+                  className="h-16 w-auto rounded-xl border border-slate-700/80 bg-[#010b1d] p-1 object-contain"
+                />
+              ) : (
+                <span>
+                  INFOR<span className="text-[#2878FF]">VERSE</span>
+                </span>
+              )}
             </a>
             <p className="mt-3 max-w-md text-sm leading-relaxed text-slate-300">
               {websiteSettings?.tagline || t.tagline}

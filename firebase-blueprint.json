@@ -1,0 +1,355 @@
+{
+  "entities": {
+    "Article": {
+      "title": "Article",
+      "description": "Global or Indonesian editorial, original, or AI-assisted information dispatch.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "title": { "type": "string", "minLength": 3, "maxLength": 300 },
+        "subtitle": { "type": "string", "maxLength": 500 },
+        "slug": { "type": "string", "minLength": 2, "maxLength": 220, "pattern": "^[a-z0-9\\-]+$" },
+        "summary": { "type": "string", "minLength": 10, "maxLength": 2000 },
+        "content": { "type": "string", "minLength": 10, "maxLength": 60000 },
+        "imageUrl": { "type": "string", "maxLength": 1000 },
+        "imageCaption": { "type": "string", "maxLength": 500 },
+        "categoryId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "countryId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "regionId": { "type": "string", "maxLength": 128 },
+        "province": { "type": "string", "maxLength": 120 },
+        "sourceId": { "type": "string", "maxLength": 128 },
+        "sourceUrl": { "type": "string", "maxLength": 1000 },
+        "sourceName": { "type": "string", "maxLength": 200 },
+        "language": { "type": "string", "enum": ["en", "id"] },
+        "tags": { "type": "array", "description": "Up to 15 topic tags." },
+        "author": { "type": "string", "maxLength": 160 },
+        "articleType": { "type": "string", "enum": ["original", "ai_summary", "editorial"] },
+        "requiresVerification": { "type": "boolean" },
+        "isVerified": { "type": "boolean" },
+        "status": { "type": "string", "enum": ["draft", "scheduled", "published", "archived"] },
+        "isAutomatic": { "type": "boolean" },
+        "isFeatured": { "type": "boolean" },
+        "viewCount": { "type": "number" },
+        "seoTitle": { "type": "string", "maxLength": 250 },
+        "seoDescription": { "type": "string", "maxLength": 400 },
+        "publishedAt": { "type": "string", "maxLength": 64 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "id",
+        "title",
+        "slug",
+        "summary",
+        "content",
+        "categoryId",
+        "countryId",
+        "language",
+        "status",
+        "isAutomatic",
+        "isVerified",
+        "viewCount",
+        "publishedAt",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "ArticleTranslation": {
+      "title": "ArticleTranslation",
+      "description": "Bilingual EN/ID translation linked to a parent article.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "articleId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "language": { "type": "string", "enum": ["en", "id"] },
+        "translatedTitle": { "type": "string", "minLength": 2, "maxLength": 300 },
+        "translatedSubtitle": { "type": "string", "maxLength": 500 },
+        "translatedSummary": { "type": "string", "minLength": 5, "maxLength": 2000 },
+        "translatedContent": { "type": "string", "minLength": 5, "maxLength": 60000 },
+        "isAiTranslated": { "type": "boolean" },
+        "status": { "type": "string", "enum": ["draft", "published"] },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "id",
+        "articleId",
+        "language",
+        "translatedTitle",
+        "translatedSummary",
+        "translatedContent",
+        "updatedAt"
+      ]
+    },
+    "Category": {
+      "title": "Category",
+      "description": "Editorial topic category.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "nameEn": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "nameId": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "slug": { "type": "string", "minLength": 2, "maxLength": 100, "pattern": "^[a-z0-9\\-]+$" },
+        "description": { "type": "string", "maxLength": 500 },
+        "descriptionId": { "type": "string", "maxLength": 500 },
+        "icon": { "type": "string", "maxLength": 500 },
+        "sortOrder": { "type": "number" },
+        "isActive": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "slug", "isActive", "createdAt"]
+    },
+    "Country": {
+      "title": "Country",
+      "description": "ISO country and continent mapping.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "nameId": { "type": "string", "maxLength": 120 },
+        "code": { "type": "string", "minLength": 2, "maxLength": 3 },
+        "isoNumeric": { "type": "string", "maxLength": 8 },
+        "continent": { "type": "string", "enum": ["Asia", "Europe", "Africa", "North America", "South America", "Oceania", "Antarctica"] },
+        "flag": { "type": "string", "maxLength": 32 },
+        "isActive": { "type": "boolean" }
+      },
+      "required": ["id", "name", "code", "continent", "isActive"]
+    },
+    "Region": {
+      "title": "Region",
+      "description": "Indonesian geographical region and province grouping.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "nameId": { "type": "string", "maxLength": 120 },
+        "slug": { "type": "string", "maxLength": 120 },
+        "countryId": { "type": "string", "maxLength": 128 },
+        "type": { "type": "string", "maxLength": 64 },
+        "provinces": { "type": "array" },
+        "isActive": { "type": "boolean" }
+      },
+      "required": ["id", "name", "countryId", "type", "isActive"]
+    },
+    "Source": {
+      "title": "Source",
+      "description": "RSS Feed, NewsAPI, or institutional information source.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "minLength": 2, "maxLength": 160 },
+        "url": { "type": "string", "maxLength": 1000 },
+        "rssUrl": { "type": "string", "maxLength": 1000 },
+        "apiType": { "type": "string", "enum": ["rss", "news_api", "government", "research", "international_org"] },
+        "countryId": { "type": "string", "maxLength": 128 },
+        "countryCode": { "type": "string", "maxLength": 4 },
+        "categoryId": { "type": "string", "maxLength": 128 },
+        "defaultCategorySlug": { "type": "string", "maxLength": 100 },
+        "language": { "type": "string", "enum": ["en", "id"] },
+        "isActive": { "type": "boolean" },
+        "lastFetchedAt": { "type": "string", "maxLength": 64 },
+        "status": { "type": "string", "enum": ["idle", "ok", "error"] },
+        "lastError": { "type": "string", "maxLength": 500 },
+        "retryCount": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "url", "apiType", "isActive", "status", "createdAt"]
+    },
+    "AutomationSettings": {
+      "title": "AutomationSettings",
+      "description": "Configuration for automated collection and Gemini processing.",
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "updateInterval": { "type": "number" },
+        "autoPublish": { "type": "boolean" },
+        "enableAiSummary": { "type": "boolean" },
+        "enableTranslation": { "type": "boolean" },
+        "enableDuplicateDetection": { "type": "boolean" },
+        "maxArticlesPerRun": { "type": "number" },
+        "aiModel": { "type": "string", "maxLength": 80 },
+        "summaryLength": { "type": "string", "enum": ["short", "medium", "detailed"] },
+        "aiSystemPrompt": { "type": "string", "maxLength": 2000 },
+        "maxRetries": { "type": "number" },
+        "tokenUsageTotal": { "type": "number" },
+        "lastRunAt": { "type": "string", "maxLength": 64 },
+        "nextRunAt": { "type": "string", "maxLength": 64 },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["enabled", "updateInterval", "autoPublish", "enableAiSummary", "enableTranslation", "enableDuplicateDetection", "maxArticlesPerRun", "updatedAt"]
+    },
+    "AutomationLog": {
+      "title": "AutomationLog",
+      "description": "Audit log for scheduled ingestion, AI runs, and admin operations.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "sourceId": { "type": "string", "maxLength": 128 },
+        "logType": { "type": "string", "enum": ["automation", "fetch_error", "ai", "admin"] },
+        "status": { "type": "string", "enum": ["success", "warning", "error", "info"] },
+        "articlesFetched": { "type": "number" },
+        "articlesPublished": { "type": "number" },
+        "errors": { "type": "array" },
+        "message": { "type": "string", "maxLength": 1000 },
+        "startedAt": { "type": "string", "maxLength": 64 },
+        "completedAt": { "type": "string", "maxLength": 64 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "status", "articlesFetched", "articlesPublished", "startedAt", "createdAt"]
+    },
+    "WebsiteSettings": {
+      "title": "WebsiteSettings",
+      "description": "Global site branding, theme, social links, and SEO settings.",
+      "type": "object",
+      "properties": {
+        "websiteName": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "tagline": { "type": "string", "maxLength": 300 },
+        "logoUrl": { "type": "string", "maxLength": 1000 },
+        "defaultLanguage": { "type": "string", "enum": ["auto", "en", "id"] },
+        "supportedLanguages": { "type": "array" },
+        "theme": { "type": "string", "enum": ["light", "dark"] },
+        "socialLinks": { "type": "object" },
+        "seoSettings": { "type": "object" },
+        "homepageSections": { "type": "object" },
+        "contactEmail": { "type": "string", "maxLength": 160 },
+        "footerNote": { "type": "string", "maxLength": 400 },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["websiteName", "tagline", "defaultLanguage", "supportedLanguages", "theme", "updatedAt"]
+    },
+    "AdminProfile": {
+      "title": "AdminProfile",
+      "description": "Administrator profile metadata isolated from public reads.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "email": { "type": "string", "format": "email", "maxLength": 160 },
+        "displayName": { "type": "string", "maxLength": 120 },
+        "role": { "type": "string", "enum": ["super_admin", "admin", "editor"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "displayName", "role", "createdAt"]
+    },
+    "AdminRole": {
+      "title": "AdminRole",
+      "description": "Authoritative admin membership lookup document.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "role": { "type": "string", "enum": ["super_admin", "admin", "editor"] },
+        "active": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "role", "active", "createdAt"]
+    },
+    "NewsletterSubscriber": {
+      "title": "NewsletterSubscriber",
+      "description": "Newsletter subscription PII isolated to admin-only access.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "email": { "type": "string", "format": "email", "maxLength": 160 },
+        "language": { "type": "string", "enum": ["en", "id"] },
+        "subscribedAt": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["active", "unsubscribed"] }
+      },
+      "required": ["id", "email", "subscribedAt", "status"]
+    },
+    "AnalyticsMetric": {
+      "title": "AnalyticsMetric",
+      "description": "Aggregated non-PII traffic metrics.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "totalVisitors": { "type": "number" },
+        "totalArticleViews": { "type": "number" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "totalVisitors", "totalArticleViews", "updatedAt"]
+    },
+    "ContactMessage": {
+      "title": "ContactMessage",
+      "description": "Editorial contact form submissions.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "email": { "type": "string", "format": "email", "maxLength": 160 },
+        "subject": { "type": "string", "maxLength": 200 },
+        "message": { "type": "string", "minLength": 5, "maxLength": 4000 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "email", "message", "createdAt"]
+    },
+    "TestConnection": {
+      "title": "TestConnection",
+      "description": "Startup Firestore connectivity probe.",
+      "type": "object",
+      "properties": {
+        "ok": { "type": "boolean" }
+      }
+    }
+  },
+  "firestore": {
+    "/articles/{articleId}": {
+      "schema": { "$ref": "#/entities/Article" },
+      "description": "Published and draft global/Indonesian articles."
+    },
+    "/articleTranslations/{translationId}": {
+      "schema": { "$ref": "#/entities/ArticleTranslation" },
+      "description": "Localized translations referencing parent articles."
+    },
+    "/categories/{categoryId}": {
+      "schema": { "$ref": "#/entities/Category" },
+      "description": "16+ bilingual topic categories."
+    },
+    "/countries/{countryId}": {
+      "schema": { "$ref": "#/entities/Country" },
+      "description": "ISO country registry with continent groupings."
+    },
+    "/regions/{regionId}": {
+      "schema": { "$ref": "#/entities/Region" },
+      "description": "Indonesian 7 regions and 38 provinces."
+    },
+    "/sources/{sourceId}": {
+      "schema": { "$ref": "#/entities/Source" },
+      "description": "RSS feeds and NewsAPI endpoints managed by admin."
+    },
+    "/automationSettings/{settingId}": {
+      "schema": { "$ref": "#/entities/AutomationSettings" },
+      "description": "Scheduled ingestion and AI rules."
+    },
+    "/automationLogs/{logId}": {
+      "schema": { "$ref": "#/entities/AutomationLog" },
+      "description": "Ingestion and editorial activity log entries."
+    },
+    "/websiteSettings/{settingId}": {
+      "schema": { "$ref": "#/entities/WebsiteSettings" },
+      "description": "Global site configuration and homepage section toggles."
+    },
+    "/adminProfiles/{uid}": {
+      "schema": { "$ref": "#/entities/AdminProfile" },
+      "description": "Admin user profiles isolated from non-admin access."
+    },
+    "/admins/{uid}": {
+      "schema": { "$ref": "#/entities/AdminRole" },
+      "description": "Authoritative admin UID registry."
+    },
+    "/newsletterSubscribers/{subscriberId}": {
+      "schema": { "$ref": "#/entities/NewsletterSubscriber" },
+      "description": "Subscriber email addresses accessible only to verified admins."
+    },
+    "/analytics/{metricId}": {
+      "schema": { "$ref": "#/entities/AnalyticsMetric" },
+      "description": "Non-PII aggregate portal view counters."
+    },
+    "/contactMessages/{messageId}": {
+      "schema": { "$ref": "#/entities/ContactMessage" },
+      "description": "Contact desk submissions readable only by admins."
+    },
+    "/test/{docId}": {
+      "schema": { "$ref": "#/entities/TestConnection" },
+      "description": "Read-only connection verification path."
+    }
+  }
+}

@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import { Eye, Sparkles } from 'lucide-react';
 import type { Article, ArticleStatus, ArticleType, Category, Country, IndonesianRegion, Language } from '../../types/inforverse';
-import { slugify } from '../../utils/editorial';
+import { requiresSensitiveVerification, sanitizeExternalUrl, slugify } from '../../utils/editorial';
+import { auth } from '../../lib/firebase';
+import { addAutomationLogToFirestore, saveArticleToFirestore } from '../../services/firestoreService';
+import { StorageImageUploader } from './StorageImageUploader';
 
 interface ArticleEditorProps {
   initialArticle?: Article | null;
   categories: Category[];
   countries: Country[];
   regions: IndonesianRegion[];
-  token: string;
   onSaved: (article: Article) => void;
   onCancel: () => void;
 }
@@ -26,7 +28,6 @@ export function ArticleEditor({
   categories,
   countries,
   regions,
-  token,
   onSaved,
   onCancel,
 }: ArticleEditorProps) {
@@ -37,8 +38,8 @@ export function ArticleEditor({
     initialArticle?.image_url || EDITORIAL_IMAGE_PRESETS[0].url
   );
   const [imageCaption, setImageCaption] = useState(initialArticle?.image_caption || '');
-  const [categoryId, setCategoryId] = useState(initialArticle?.category_id || categories[0]?.id || '');
-  const [countryId, setCountryId] = useState(initialArticle?.country_id || countries[0]?.id || '');
+  const [categoryId, setCategoryId] = useState(initialArticle?.category_id || categories[0]?.id || 'cat-world');
+  const [countryId, setCountryId] = useState(initialArticle?.country_id || countries[0]?.id || 'co-id');
   const [regionId, setRegionId] = useState(initialArticle?.region_id || '');
   const [province, setProvince] = useState(initialArticle?.province || '');
   const [tagsInput, setTagsInput] = useState((initialArticle?.tags || []).join(', '));
@@ -58,7 +59,6 @@ export function ArticleEditor({
   const [seoTitle, setSeoTitle] = useState(initialArticle?.seo_title || '');
   const [seoDescription, setSeoDescription] = useState(initialArticle?.seo_description || '');
 
-  // Paired translation fields
   const pairedLang: Language = language === 'en' ? 'id' : 'en';
   const existingTrans = initialArticle?.translations?.[pairedLang];
   const [transTitle, setTransTitle] = useState(existingTrans?.title || '');
@@ -80,11 +80,16 @@ export function ArticleEditor({
     setAiWorking(true);
     setError(null);
     try {
+      const idToken = await auth.currentUser?.getIdToken();
+      if (!idToken) {
+        setError('Firebase administrator session required.');
+        return;
+      }
       const res = await fetch('/api/admin/ai/translate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${idToken}`,
         },
         body: JSON.stringify({
           title,
@@ -117,11 +122,18 @@ export function ArticleEditor({
     setSaving(true);
     setError(null);
     try {
+      const isEditing = Boolean(initialArticle?.id);
+      const articleId = initialArticle?.id || `art-${Date.now()}`;
+      const cleanSlug = slugify(slug.trim() || title) || `article-${Date.now()}`;
+      const selectedCategory = categories.find((c) => c.id === categoryId) || categories[0];
+      const isSensitive = requiresSensitiveVerification(selectedCategory?.slug || '');
+      const nowIso = new Date().toISOString();
+
       const translations: Article['translations'] = {};
       if (transTitle.trim() && transSummary.trim()) {
         translations[pairedLang] = {
-          id: existingTrans?.id || `tr-${Date.now()}`,
-          article_id: initialArticle?.id || '',
+          id: existingTrans?.id || `tr-${articleId}-${pairedLang}`,
+          article_id: articleId,
           language: pairedLang,
           title: transTitle.trim(),
           subtitle,
@@ -131,47 +143,50 @@ export function ArticleEditor({
         };
       }
 
-      const res = await fetch('/api/admin/articles', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          id: initialArticle?.id,
-          title: title.trim(),
-          subtitle: subtitle.trim(),
-          slug: slug.trim() || slugify(title),
-          image_url: imageUrl.trim(),
-          image_caption: imageCaption.trim(),
-          category_id: categoryId,
-          country_id: countryId,
-          region_id: regionId || null,
-          province: province || null,
-          tags: tagsInput.split(',').map((s) => s.trim()).filter(Boolean),
-          summary: summary.trim(),
-          content: content.trim(),
-          source_name: sourceName.trim(),
-          source_url: sourceUrl.trim(),
-          author: author.trim(),
-          language,
-          article_type: articleType,
-          is_featured: isFeatured,
-          published_at: new Date(publishedAt).toISOString(),
-          seo_title: seoTitle.trim(),
-          seo_description: seoDescription.trim(),
-          status,
-          translations,
-        }),
+      const articlePayload: Article = {
+        id: articleId,
+        title: title.trim(),
+        subtitle: subtitle.trim(),
+        slug: cleanSlug,
+        image_url: sanitizeExternalUrl(imageUrl.trim()) || imageUrl.trim() || EDITORIAL_IMAGE_PRESETS[0].url,
+        image_caption: imageCaption.trim(),
+        category_id: categoryId,
+        country_id: countryId,
+        region_id: regionId || null,
+        province: province || null,
+        source_id: initialArticle?.source_id || null,
+        tags: tagsInput.split(',').map((s) => s.trim()).filter(Boolean).slice(0, 15),
+        summary: summary.trim(),
+        content: content.trim(),
+        source_name: sourceName.trim() || 'INFORVERSE Editorial',
+        source_url: sanitizeExternalUrl(sourceUrl.trim()),
+        author: author.trim() || auth.currentUser?.email || 'INFORVERSE Desk',
+        article_type: articleType,
+        requires_verification: initialArticle?.requires_verification ?? isSensitive,
+        is_verified: initialArticle?.is_verified ?? true,
+        language,
+        is_automatic: initialArticle?.is_automatic || false,
+        is_featured: isFeatured,
+        views_count: initialArticle?.views_count || 0,
+        published_at: new Date(publishedAt).toISOString(),
+        updated_at: nowIso,
+        created_at: initialArticle?.created_at || nowIso,
+        seo_title: seoTitle.trim() || `${title.trim()} | INFORVERSE`,
+        seo_description: seoDescription.trim() || summary.trim().slice(0, 155),
+        status,
+        translations,
+      };
+
+      await saveArticleToFirestore(articlePayload, isEditing);
+      await addAutomationLogToFirestore({
+        logType: 'admin',
+        status: 'success',
+        articlesPublished: status === 'published' ? 1 : 0,
+        message: `${isEditing ? 'Updated' : 'Created'} article "${articlePayload.title}" (${status})`,
       });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error || 'Failed to save article.');
-      } else {
-        onSaved(data.article);
-      }
-    } catch {
-      setError('Network error while saving article.');
+      onSaved(articlePayload);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save article to Cloud Firestore.');
     } finally {
       setSaving(false);
     }
@@ -211,7 +226,7 @@ export function ArticleEditor({
     <div className="space-y-5 rounded-xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-[#10233F]/55">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4 dark:border-slate-700">
         <h3 className="text-lg font-bold text-[#071426] dark:text-white">
-          {initialArticle ? 'Edit Article' : 'Create New Article'}
+          {initialArticle ? 'Edit Article (Firestore)' : 'Create New Article (Firestore)'}
         </h3>
         <div className="flex flex-wrap items-center gap-2">
           <button
@@ -359,32 +374,40 @@ export function ArticleEditor({
           </select>
         </div>
 
-        <div>
-          <label htmlFor="ed-image" className="block text-xs font-semibold text-slate-600 dark:text-slate-300">
-            Main Image URL
-          </label>
-          <input
-            id="ed-image"
-            type="text"
-            value={imageUrl}
-            onChange={(e) => setImageUrl(e.target.value)}
-            className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-[#F3F5F8] px-3 text-xs text-[#071426] dark:border-slate-700 dark:bg-[#071426] dark:text-white"
+        <div className="md:col-span-2 space-y-2">
+          <StorageImageUploader
+            folder="articles"
+            currentUrl={imageUrl}
+            label="Upload Article Featured Image to Firebase Storage"
+            onChangeUrl={(nextUrl) => setImageUrl(nextUrl)}
           />
-          <div className="mt-1.5 flex flex-wrap gap-1">
-            {EDITORIAL_IMAGE_PRESETS.map((preset) => (
-              <button
-                key={preset.url}
-                type="button"
-                onClick={() => setImageUrl(preset.url)}
-                className="rounded border border-slate-200 px-2 py-0.5 text-[11px] text-slate-600 hover:border-[#2878FF] dark:border-slate-700 dark:text-slate-300"
-              >
-                {preset.label}
-              </button>
-            ))}
+          <div>
+            <label htmlFor="ed-image" className="block text-xs font-semibold text-slate-600 dark:text-slate-300">
+              Or Set Featured Image URL / Editorial Preset
+            </label>
+            <input
+              id="ed-image"
+              type="text"
+              value={imageUrl}
+              onChange={(e) => setImageUrl(e.target.value)}
+              className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-[#F3F5F8] px-3 text-xs text-[#071426] dark:border-slate-700 dark:bg-[#071426] dark:text-white"
+            />
+            <div className="mt-1.5 flex flex-wrap gap-1">
+              {EDITORIAL_IMAGE_PRESETS.map((preset) => (
+                <button
+                  key={preset.url}
+                  type="button"
+                  onClick={() => setImageUrl(preset.url)}
+                  className="rounded border border-slate-200 px-2 py-0.5 text-[11px] text-slate-600 hover:border-[#2878FF] dark:border-slate-700 dark:text-slate-300"
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
-        <div>
+        <div className="md:col-span-2">
           <label htmlFor="ed-img-caption" className="block text-xs font-semibold text-slate-600 dark:text-slate-300">
             Image Caption
           </label>
@@ -532,7 +555,6 @@ export function ArticleEditor({
           />
         </div>
 
-        {/* Paired Translation Section */}
         <div className="md:col-span-2 rounded-lg border border-slate-200 bg-[#F3F5F8] p-4 dark:border-slate-700 dark:bg-[#071426]">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h4 className="text-xs font-bold uppercase text-slate-600 dark:text-slate-300">
@@ -600,7 +622,6 @@ export function ArticleEditor({
         </div>
       </div>
 
-      {/* Action Buttons */}
       <div className="flex flex-wrap items-center justify-end gap-3 border-t border-slate-200 pt-4 dark:border-slate-700">
         <button
           type="button"

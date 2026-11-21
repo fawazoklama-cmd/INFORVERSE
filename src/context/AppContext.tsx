@@ -1,6 +1,17 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
-import type { Category, Country, IndonesianRegion, Language, ThemeMode, WebsiteSettings } from '../types/inforverse';
+import { onAuthStateChanged, signOut, type User } from 'firebase/auth';
+import type {
+  AdminProfile,
+  Category,
+  Country,
+  IndonesianRegion,
+  Language,
+  ThemeMode,
+  WebsiteSettings,
+} from '../types/inforverse';
 import { UI_COPY } from '../i18n/translations';
+import { auth } from '../lib/firebase';
+import { fetchPublicBootstrapFromFirestore, verifyAdminAuthorization } from '../services/firestoreService';
 
 interface AppContextValue {
   language: Language;
@@ -22,6 +33,11 @@ interface AppContextValue {
   currentPath: string;
   navigate: (to: string) => void;
   refreshBootstrap: () => Promise<void>;
+  firebaseUser: User | null;
+  adminProfile: AdminProfile | null;
+  authLoading: boolean;
+  logoutAdmin: () => Promise<void>;
+  refreshAdminAuth: () => Promise<AdminProfile | null>;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -56,6 +72,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [websiteSettings, setWebsiteSettings] = useState<WebsiteSettings | null>(null);
   const [newsletterEnabled, setNewsletterEnabled] = useState(false);
   const [currentPath, setCurrentPath] = useState<string>(() => window.location.pathname + window.location.search);
+
+  const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
+  const [adminProfile, setAdminProfile] = useState<AdminProfile | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
 
   const [bookmarks, setBookmarks] = useState<string[]>(() => {
     try {
@@ -100,25 +120,79 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const refreshBootstrap = useCallback(async () => {
     try {
+      const fsData = await fetchPublicBootstrapFromFirestore();
+      if (fsData && fsData.categories.length > 0) {
+        setCategories(fsData.categories);
+        setCountries(fsData.countries);
+        setRegions(fsData.regions);
+        if (fsData.websiteSettings) setWebsiteSettings(fsData.websiteSettings);
+      }
+    } catch {
+      // Fallback transparently to server bootstrap if Firestore is not yet seeded
+    }
+
+    try {
       const res = await fetch('/api/bootstrap');
       if (!res.ok) return;
       const data = await res.json();
-      setCategories(data.categories || []);
-      setCountries(data.countries || []);
-      setRegions(data.regions || []);
-      setWebsiteSettings(data.websiteSettings || null);
+      setCategories((prev) => (prev.length > 0 ? prev : data.categories || []));
+      setCountries((prev) => (prev.length > 0 ? prev : data.countries || []));
+      setRegions((prev) => (prev.length > 0 ? prev : data.regions || []));
+      setWebsiteSettings((prev) => prev || data.websiteSettings || null);
       setNewsletterEnabled(Boolean(data.newsletterEnabled));
     } catch {
       // Handled gracefully by pages
     }
   }, []);
 
+  const refreshAdminAuth = useCallback(async (): Promise<AdminProfile | null> => {
+    const user = auth.currentUser;
+    if (!user) {
+      setAdminProfile(null);
+      return null;
+    }
+    try {
+      const profile = await verifyAdminAuthorization(user.uid, user.email);
+      setAdminProfile(profile);
+      return profile;
+    } catch {
+      setAdminProfile(null);
+      return null;
+    }
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setFirebaseUser(user);
+      if (user) {
+        try {
+          const profile = await verifyAdminAuthorization(user.uid, user.email);
+          setAdminProfile(profile);
+        } catch {
+          setAdminProfile(null);
+        }
+      } else {
+        setAdminProfile(null);
+      }
+      setAuthLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const logoutAdmin = useCallback(async () => {
+    await signOut(auth);
+    setAdminProfile(null);
+  }, []);
+
   useEffect(() => {
     void refreshBootstrap();
-    // Record anonymized visit once per session
-    if (!sessionStorage.getItem('inforverse_visited')) {
-      sessionStorage.setItem('inforverse_visited', '1');
-      void fetch('/api/analytics/visit', { method: 'POST' });
+    try {
+      if (!sessionStorage.getItem('inforverse_visited')) {
+        sessionStorage.setItem('inforverse_visited', '1');
+        void fetch('/api/analytics/visit', { method: 'POST' });
+      }
+    } catch {
+      // Ignore storage restrictions
     }
   }, [refreshBootstrap]);
 
@@ -162,8 +236,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const isBookmarked = useCallback((articleId: string) => bookmarks.includes(articleId), [bookmarks]);
 
-  const addSearchHistory = useCallback((query: string) => {
-    const clean = query.trim();
+  const addSearchHistory = useCallback((queryText: string) => {
+    const clean = queryText.trim();
     if (!clean) return;
     setSearchHistory((prev) => {
       const next = [clean, ...prev.filter((item) => item.toLowerCase() !== clean.toLowerCase())].slice(0, 8);
@@ -207,6 +281,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         currentPath,
         navigate,
         refreshBootstrap,
+        firebaseUser,
+        adminProfile,
+        authLoading,
+        logoutAdmin,
+        refreshAdminAuth,
       }}
     >
       {children}

@@ -3,6 +3,7 @@ import { Bookmark } from 'lucide-react';
 import type { Article } from '../types/inforverse';
 import { useApp } from '../context/AppContext';
 import { ArticleCard } from '../components/ArticleCard';
+import { loadPublishedArticlesWithFallback } from '../services/firestoreService';
 
 export function BookmarksPage() {
   const { bookmarks, language, navigate, t } = useApp();
@@ -13,12 +14,8 @@ export function BookmarksPage() {
     const load = async () => {
       setLoading(true);
       try {
-        const res = await fetch('/api/articles?limit=100');
-        if (res.ok) {
-          const data = await res.json();
-          const all: Article[] = data.articles || [];
-          setArticles(all.filter((a) => bookmarks.includes(a.id)));
-        }
+        const res = await loadPublishedArticlesWithFallback({ pageSize: 100 });
+        setArticles(res.articles.filter((a) => bookmarks.includes(a.id)));
       } finally {
         setLoading(false);
       }

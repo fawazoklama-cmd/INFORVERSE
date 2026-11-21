@@ -1,6 +1,5 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type {
   AdminDashboardStats,
   Article,
@@ -49,6 +48,27 @@ interface StoreState {
 const DATA_DIR = path.resolve(process.cwd(), 'server', 'data');
 const DATA_FILE = path.join(DATA_DIR, 'inforverse-store.json');
 
+function getFirebaseConfigSummary(): { configured: boolean; storageConfigured: boolean; appCheckConfigured: boolean } {
+  try {
+    const configPath = path.resolve(process.cwd(), 'firebase-applet-config.json');
+    if (fs.existsSync(configPath)) {
+      const cfg = JSON.parse(fs.readFileSync(configPath, 'utf8')) as {
+        projectId?: string;
+        storageBucket?: string;
+        recaptchaSiteKey?: string;
+      };
+      return {
+        configured: Boolean(cfg.projectId && !cfg.projectId.includes('remixed')),
+        storageConfigured: Boolean(cfg.storageBucket),
+        appCheckConfigured: Boolean(cfg.recaptchaSiteKey || process.env.VITE_FIREBASE_APPCHECK_SITE_KEY),
+      };
+    }
+  } catch {
+    // Ignore config read failure
+  }
+  return { configured: false, storageConfigured: false, appCheckConfigured: false };
+}
+
 function getInitialState(): StoreState {
   return {
     categories: structuredClone(SEED_CATEGORIES),
@@ -68,19 +88,9 @@ function getInitialState(): StoreState {
 
 class InforverseStore {
   private state: StoreState;
-  private supabase: SupabaseClient | null = null;
 
   constructor() {
-    if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      this.supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
-        auth: { persistSession: false },
-      });
-    }
     this.state = this.loadLocal();
-  }
-
-  public isSupabaseConnected(): boolean {
-    return Boolean(this.supabase);
   }
 
   private loadLocal(): StoreState {
@@ -96,6 +106,7 @@ class InforverseStore {
           websiteSettings: {
             ...defaults.websiteSettings,
             ...parsed.websiteSettings,
+            logo_url: parsed.websiteSettings?.logo_url?.trim() || defaults.websiteSettings.logo_url,
             homepage_sections: {
               ...defaults.websiteSettings.homepage_sections,
               ...(parsed.websiteSettings?.homepage_sections || {}),
@@ -104,7 +115,7 @@ class InforverseStore {
         };
       }
     } catch {
-      // Fallback cleanly to initial seed if local file is missing or unreadable
+      // Fallback cleanly to initial seed
     }
     const fresh = getInitialState();
     this.saveLocal(fresh);
@@ -119,7 +130,7 @@ class InforverseStore {
       fs.writeFileSync(tempFile, JSON.stringify(target, null, 2), 'utf8');
       fs.renameSync(tempFile, DATA_FILE);
     } catch {
-      // Ignore write failures in read-only serverless runtimes (e.g. Vercel when Supabase is active)
+      // Ignore write failures in read-only serverless runtimes (Firestore is primary persistent backend)
     }
   }
 
@@ -198,7 +209,6 @@ class InforverseStore {
 
   public getArticles(includeAllStatuses = false): Article[] {
     const now = Date.now();
-    // Automatically promote scheduled articles whose published_at has arrived
     let changed = false;
     for (const art of this.state.articles) {
       if (art.status === 'scheduled' && new Date(art.published_at).getTime() <= now) {
@@ -232,34 +242,6 @@ class InforverseStore {
       this.state.articles.unshift(article);
     }
     this.saveLocal();
-    if (this.supabase) {
-      // Best-effort sync to Supabase when configured
-      void this.supabase.from('articles').upsert({
-        id: article.id,
-        title: article.title,
-        slug: article.slug,
-        subtitle: article.subtitle,
-        summary: article.summary,
-        content: article.content,
-        image_url: article.image_url,
-        image_caption: article.image_caption,
-        source_name: article.source_name,
-        source_url: article.source_url,
-        author: article.author,
-        article_type: article.article_type,
-        requires_verification: article.requires_verification,
-        is_verified: article.is_verified,
-        language: article.language,
-        status: article.status,
-        is_automatic: article.is_automatic,
-        is_featured: article.is_featured,
-        views_count: article.views_count,
-        seo_title: article.seo_title,
-        seo_description: article.seo_description,
-        published_at: article.published_at,
-        updated_at: article.updated_at,
-      });
-    }
     return article;
   }
 
@@ -381,6 +363,7 @@ class InforverseStore {
   public getDashboardStats(): AdminDashboardStats {
     const articles = this.state.articles;
     const logs = this.state.logs;
+    const fb = getFirebaseConfigSummary();
     return {
       totalArticles: articles.length,
       publishedArticles: articles.filter((a) => a.status === 'published').length,
@@ -392,7 +375,9 @@ class InforverseStore {
       failedUpdates: logs.filter((l) => l.log_type === 'fetch_error' || l.status === 'error').length,
       newsletterSubscribers: this.state.newsletterSubscribers.length,
       integrations: {
-        supabaseConfigured: Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY),
+        firebaseConfigured: fb.configured,
+        storageConfigured: fb.storageConfigured,
+        appCheckConfigured: fb.appCheckConfigured,
         geminiConfigured: Boolean(process.env.GEMINI_API_KEY),
         newsApiConfigured: Boolean(process.env.NEWS_API_KEY),
         newsletterConfigured: process.env.NEWSLETTER_ENABLED === 'true',

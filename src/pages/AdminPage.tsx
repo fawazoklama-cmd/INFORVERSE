@@ -8,6 +8,7 @@ import {
   Globe,
   LogOut,
   Plus,
+  RefreshCw,
   Rss,
   Settings,
   Sliders,
@@ -25,6 +26,12 @@ import type {
   WebsiteSettings,
 } from '../types/inforverse';
 import { useApp } from '../context/AppContext';
+import { appCheckSiteKey, auth, firebaseConfig, isFirebaseConfigured } from '../lib/firebase';
+import {
+  deleteArticleFromFirestore,
+  fetchAdminFirestoreOverview,
+  seedFirestoreBaselineIfEmpty,
+} from '../services/firestoreService';
 import { AdminAuthPanel } from '../components/admin/AdminAuthPanel';
 import { ArticleEditor } from '../components/admin/ArticleEditor';
 import { AdminPanels } from '../components/admin/AdminPanels';
@@ -41,12 +48,12 @@ type AdminTab =
   | 'logs';
 
 export function AdminPage() {
-  const { refreshBootstrap } = useApp();
-  const [token, setToken] = useState<string | null>(null);
-  const [adminEmail, setAdminEmail] = useState<string>('');
+  const { firebaseUser, adminProfile, authLoading, logoutAdmin, refreshBootstrap } = useApp();
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
 
   const [loading, setLoading] = useState(false);
+  const [seeding, setSeeding] = useState(false);
+  const [seedNotice, setSeedNotice] = useState<string | null>(null);
   const [stats, setStats] = useState<AdminDashboardStats | null>(null);
   const [articles, setArticles] = useState<Article[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -60,57 +67,96 @@ export function AdminPage() {
   const [editingArticle, setEditingArticle] = useState<Article | null | undefined>(undefined);
 
   const loadOverview = useCallback(async () => {
-    if (!token) return;
+    if (!firebaseUser || !adminProfile) return;
     setLoading(true);
     try {
-      const res = await fetch('/api/admin/overview', {
-        headers: { Authorization: `Bearer ${token}` },
+      await seedFirestoreBaselineIfEmpty();
+      const fsData = await fetchAdminFirestoreOverview();
+
+      let integrations: AdminDashboardStats['integrations'] = {
+        firebaseConfigured: isFirebaseConfigured,
+        storageConfigured: Boolean(firebaseConfig.storageBucket),
+        appCheckConfigured: Boolean(appCheckSiteKey),
+        geminiConfigured: false,
+        newsApiConfigured: false,
+        newsletterConfigured: false,
+      };
+      let serverVisitors = fsData.totalVisitors;
+
+      try {
+        const idToken = await auth.currentUser?.getIdToken();
+        if (idToken) {
+          const res = await fetch('/api/admin/integrations-status', {
+            headers: { Authorization: `Bearer ${idToken}` },
+          });
+          if (res.ok) {
+            const statusJson = await res.json();
+            integrations = { ...integrations, ...(statusJson.integrations || {}) };
+            if (typeof statusJson.totalVisitors === 'number') {
+              serverVisitors = Math.max(serverVisitors, statusJson.totalVisitors);
+            }
+          }
+        }
+      } catch {
+        // Non-fatal if Express integrations endpoint is unreachable
+      }
+
+      setArticles(fsData.articles);
+      setCategories(fsData.categories);
+      setCountries(fsData.countries);
+      setRegions(fsData.regions);
+      setSources(fsData.sources);
+      setAutomationSettings(fsData.automationSettings);
+      setWebsiteSettings(fsData.websiteSettings);
+      setLogs(fsData.logs);
+
+      setStats({
+        totalArticles: fsData.articles.length,
+        publishedArticles: fsData.articles.filter((a) => a.status === 'published').length,
+        draftArticles: fsData.articles.filter((a) => a.status === 'draft').length,
+        totalCategories: fsData.categories.length,
+        activeSources: fsData.sources.filter((s) => s.is_active).length,
+        totalVisitors: serverVisitors,
+        automaticUpdates: fsData.logs.filter((l) => l.log_type === 'automation' && l.status === 'success').length,
+        failedUpdates: fsData.logs.filter((l) => l.log_type === 'fetch_error' || l.status === 'error').length,
+        newsletterSubscribers: fsData.subscriberCount,
+        integrations,
       });
-      if (res.status === 401) {
-        setToken(null);
-        return;
-      }
-      if (res.ok) {
-        const data = await res.json();
-        setStats(data.stats);
-        setArticles(data.articles || []);
-        setCategories(data.categories || []);
-        setCountries(data.countries || []);
-        setRegions(data.regions || []);
-        setSources(data.sources || []);
-        setAutomationSettings(data.automationSettings);
-        setWebsiteSettings(data.websiteSettings);
-        setLogs(data.logs || []);
-      }
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [firebaseUser, adminProfile]);
 
   useEffect(() => {
-    if (token) {
+    if (firebaseUser && adminProfile) {
       void loadOverview();
     }
-  }, [token, loadOverview]);
+  }, [firebaseUser, adminProfile, loadOverview]);
 
-  if (!token) {
-    return (
-      <AdminAuthPanel
-        onAuthenticated={(newToken, email) => {
-          setToken(newToken);
-          setAdminEmail(email);
-        }}
-      />
-    );
+  if (authLoading || !firebaseUser || !adminProfile) {
+    return <AdminAuthPanel />;
   }
 
   const handleDeleteArticle = async (id: string) => {
-    const res = await fetch(`/api/admin/articles/${id}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (res.ok) {
+    await deleteArticleFromFirestore(id);
+    await loadOverview();
+    await refreshBootstrap();
+  };
+
+  const handleManualSeed = async () => {
+    setSeeding(true);
+    setSeedNotice(null);
+    try {
+      const seeded = await seedFirestoreBaselineIfEmpty();
+      setSeedNotice(
+        seeded
+          ? 'Baseline categories, countries, regions, sources, and articles synced to Cloud Firestore.'
+          : 'Cloud Firestore already contains baseline categories and articles.'
+      );
       await loadOverview();
+      await refreshBootstrap();
+    } finally {
+      setSeeding(false);
     }
   };
 
@@ -128,20 +174,18 @@ export function AdminPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-      {/* Top Console Header */}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-4 dark:border-slate-800">
         <div>
-          <p className="text-xs font-semibold text-[#2878FF]">INFORVERSE ADMIN DASHBOARD</p>
+          <p className="text-xs font-semibold text-[#2878FF]">INFORVERSE FIREBASE ADMIN</p>
           <h1 className="text-2xl font-bold text-[#071426] dark:text-white">Editorial & Automation Console</h1>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-xs text-slate-500 dark:text-slate-400">{adminEmail}</span>
+          <span className="text-xs text-slate-500 dark:text-slate-400">
+            {adminProfile.email} ({adminProfile.role})
+          </span>
           <button
             type="button"
-            onClick={() => {
-              setToken(null);
-              setAdminEmail('');
-            }}
+            onClick={() => void logoutAdmin()}
             className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:border-rose-500 hover:text-rose-600 dark:border-slate-700 dark:text-slate-200"
           >
             <LogOut className="h-3.5 w-3.5" />
@@ -151,7 +195,6 @@ export function AdminPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-        {/* Sidebar Navigation */}
         <aside className="lg:col-span-3">
           <nav aria-label="Admin sections" className="flex flex-wrap gap-1.5 lg:flex-col">
             {navItems.map((item) => (
@@ -175,10 +218,9 @@ export function AdminPage() {
           </nav>
         </aside>
 
-        {/* Main Workspace */}
         <div className="lg:col-span-9">
           {loading && !stats ? (
-            <p className="py-10 text-sm text-slate-500">Loading dashboard data...</p>
+            <p className="py-10 text-sm text-slate-500">Loading Cloud Firestore dashboard...</p>
           ) : activeTab === 'overview' && stats ? (
             <div className="space-y-6">
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
@@ -204,14 +246,37 @@ export function AdminPage() {
                 ))}
               </div>
 
-              {/* Real Integration Status */}
               <div className="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-[#10233F]/55">
-                <h2 className="text-sm font-bold text-[#071426] dark:text-white">Integration & Service Status</h2>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <h2 className="text-sm font-bold text-[#071426] dark:text-white">Firebase & Integration Status</h2>
+                  <button
+                    type="button"
+                    disabled={seeding}
+                    onClick={() => void handleManualSeed()}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-[#071426] hover:border-[#2878FF] dark:border-slate-700 dark:text-white"
+                  >
+                    <RefreshCw className="h-3.5 w-3.5" />
+                    <span>{seeding ? 'Syncing...' : 'Verify Firestore Baseline'}</span>
+                  </button>
+                </div>
+                {seedNotice && <p className="mt-2 text-xs text-[#2878FF]">{seedNotice}</p>}
                 <div className="mt-3 grid grid-cols-1 gap-3 text-xs sm:grid-cols-2">
                   <div className="flex items-center justify-between rounded-lg bg-[#F3F5F8] px-3.5 py-2.5 dark:bg-[#071426]">
-                    <span>Supabase PostgreSQL</span>
-                    <span className={stats.integrations.supabaseConfigured ? 'font-semibold text-emerald-600' : 'text-amber-600'}>
-                      {stats.integrations.supabaseConfigured ? 'Connected' : 'Local Persistent Store (Set SUPABASE_URL)'}
+                    <span>Cloud Firestore & Auth</span>
+                    <span className={stats.integrations.firebaseConfigured ? 'font-semibold text-emerald-600' : 'text-amber-600'}>
+                      {stats.integrations.firebaseConfigured ? `Connected (${firebaseConfig.projectId})` : 'Unconfigured'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between rounded-lg bg-[#F3F5F8] px-3.5 py-2.5 dark:bg-[#071426]">
+                    <span>Firebase Storage</span>
+                    <span className={stats.integrations.storageConfigured ? 'font-semibold text-emerald-600' : 'text-amber-600'}>
+                      {stats.integrations.storageConfigured ? 'Bucket Ready' : 'Not Configured'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between rounded-lg bg-[#F3F5F8] px-3.5 py-2.5 dark:bg-[#071426]">
+                    <span>Firebase App Check</span>
+                    <span className={stats.integrations.appCheckConfigured ? 'font-semibold text-emerald-600' : 'text-slate-500'}>
+                      {stats.integrations.appCheckConfigured ? 'reCAPTCHA Active' : 'Optional (Set VITE_FIREBASE_APPCHECK_SITE_KEY)'}
                     </span>
                   </div>
                   <div className="flex items-center justify-between rounded-lg bg-[#F3F5F8] px-3.5 py-2.5 dark:bg-[#071426]">
@@ -242,7 +307,6 @@ export function AdminPage() {
                 categories={categories}
                 countries={countries}
                 regions={regions}
-                token={token}
                 onSaved={async () => {
                   setEditingArticle(undefined);
                   await loadOverview();
@@ -320,7 +384,6 @@ export function AdminPage() {
           ) : activeTab !== 'overview' && automationSettings && websiteSettings && stats ? (
             <AdminPanels
               tab={activeTab}
-              token={token}
               sources={sources}
               categories={categories}
               countries={countries}

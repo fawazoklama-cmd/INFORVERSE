@@ -472,7 +472,7 @@
       "status": "published",
       "is_automatic": false,
       "is_featured": true,
-      "views_count": 4821,
+      "views_count": 4822,
       "tags": [
         "Global Trade",
         "Digital Infrastructure",
@@ -853,6 +853,7 @@
     "id": 1,
     "site_name": "INFORVERSE",
     "tagline": "Explore The World, Discover The Information.",
+    "logo_url": "/assets/aistudio/file_0000000075988207a19a527ce9b910d4_16885cc1.png",
     "default_language": "auto",
     "default_theme": "light",
     "seo_title": "INFORVERSE — Global & Indonesia Information Portal",
@@ -887,7 +888,7 @@
       "created_at": "2026-11-21T00:00:00.000Z"
     }
   ],
-  "visitorsCount": 1425,
+  "visitorsCount": 1432,
   "newsletterSubscribers": [],
   "contactMessages": [],
   "adminCredential": null

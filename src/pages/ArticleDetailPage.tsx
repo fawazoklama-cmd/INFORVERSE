@@ -19,6 +19,7 @@ import {
   getLocalizedArticleFields,
   sanitizeExternalUrl,
 } from '../utils/editorial';
+import { loadPublishedArticleBySlugWithFallback } from '../services/firestoreService';
 
 interface ArticleDetailPageProps {
   slug: string;
@@ -39,16 +40,15 @@ export function ArticleDetailPage({ slug }: ArticleDetailPageProps) {
       setNotFound(false);
       setImgError(false);
       try {
-        const res = await fetch(`/api/articles/${encodeURIComponent(slug)}`);
-        if (res.status === 404) {
+        const data = await loadPublishedArticleBySlugWithFallback(slug);
+        if (!data.article) {
           setNotFound(true);
           return;
         }
-        if (res.ok) {
-          const data = await res.json();
-          setArticle(data.article);
-          setRelated(data.related || []);
-        }
+        setArticle(data.article);
+        setRelated(data.related);
+      } catch {
+        setNotFound(true);
       } finally {
         setLoading(false);
       }
@@ -173,7 +173,13 @@ export function ArticleDetailPage({ slug }: ArticleDetailPageProps) {
 
         <button
           type="button"
-          onClick={() => window.history.back()}
+          onClick={() => {
+            if (window.history.length > 1) {
+              window.history.back();
+            } else {
+              navigate('/');
+            }
+          }}
           className="inline-flex items-center gap-1.5 font-medium text-slate-600 hover:text-[#2878FF] dark:text-slate-300"
         >
           <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />

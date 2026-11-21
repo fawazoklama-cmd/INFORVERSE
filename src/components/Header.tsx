@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Bookmark, Globe, Menu, Moon, Search, Sun, X } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { DEFAULT_LOGO_URL } from '../data/baselineCatalog';
 
 interface HeaderProps {
   onOpenSearch: () => void;
@@ -22,6 +23,13 @@ export function Header({ onOpenSearch }: HeaderProps) {
   const { language, setLanguage, theme, toggleTheme, categories, currentPath, navigate, t, bookmarks, websiteSettings } =
     useApp();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [logoError, setLogoError] = useState(false);
+
+  const logoSrc = websiteSettings?.logo_url?.trim() || DEFAULT_LOGO_URL;
+
+  useEffect(() => {
+    setLogoError(false);
+  }, [logoSrc]);
 
   const railCategories = RAIL_SLUGS.map((slug) => categories.find((c) => c.slug === slug)).filter(
     (c): c is NonNullable<typeof c> => Boolean(c)
@@ -39,14 +47,23 @@ export function Header({ onOpenSearch }: HeaderProps) {
   return (
     <header className="sticky top-0 z-40 border-b border-slate-200/90 bg-white/95 backdrop-blur-md transition-colors dark:border-slate-800 dark:bg-[#071426]/95">
       {/* Primary Top Bar (56px height — stays <= 7% of mobile viewport) */}
-      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:gap-8">
+      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-2 px-3 sm:gap-4 sm:px-6 lg:gap-8">
         <a
           href="/"
           onClick={(e) => handleLinkClick(e, '/')}
-          className="flex items-center whitespace-nowrap shrink-0 text-xl font-bold tracking-[-0.03em] text-[#071426] dark:text-white"
+          className="flex min-w-0 items-center gap-2 whitespace-nowrap shrink-0 text-lg font-bold tracking-[-0.03em] text-[#071426] dark:text-white sm:gap-2.5 sm:text-xl"
         >
-          <span>INFOR</span>
-          <span className="text-[#2878FF]">VERSE</span>
+          {!logoError && logoSrc && (
+            <img
+              src={logoSrc}
+              alt={`${siteName} logo`}
+              onError={() => setLogoError(true)}
+              className="h-7 w-auto shrink-0 rounded-md bg-[#010b1d] px-1 py-0.5 object-contain ring-1 ring-slate-900/10 dark:ring-white/15 sm:h-9 sm:rounded-lg sm:px-1.5"
+            />
+          )}
+          <span>
+            INFOR<span className="text-[#2878FF]">VERSE</span>
+          </span>
           {siteName !== 'INFORVERSE' && (
             <span className="sr-only">{siteName}</span>
           )}
@@ -79,12 +96,12 @@ export function Header({ onOpenSearch }: HeaderProps) {
         </nav>
 
         {/* Utility Controls */}
-        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           <button
             type="button"
             onClick={onOpenSearch}
             aria-label={t.nav.search}
-            className="inline-flex h-10 items-center gap-1.5 rounded-lg px-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-[#F3F5F8] hover:text-[#071426] dark:text-slate-200 dark:hover:bg-[#10233F] dark:hover:text-white"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-sm font-medium text-slate-700 transition-colors hover:bg-[#F3F5F8] hover:text-[#071426] dark:text-slate-200 dark:hover:bg-[#10233F] dark:hover:text-white sm:h-10 sm:w-auto sm:gap-1.5 sm:px-2.5"
           >
             <Search className="h-4 w-4" aria-hidden="true" />
             <span className="hidden sm:inline whitespace-nowrap">{t.nav.search}</span>
@@ -94,7 +111,7 @@ export function Header({ onOpenSearch }: HeaderProps) {
             type="button"
             onClick={() => setLanguage(language === 'en' ? 'id' : 'en')}
             aria-label={language === 'en' ? 'Switch language to Indonesian' : 'Ganti bahasa ke Inggris'}
-            className="inline-flex h-10 items-center gap-1 rounded-lg border border-slate-200 px-2.5 text-xs font-semibold tracking-wide text-[#071426] transition-colors hover:border-[#2878FF] hover:text-[#2878FF] dark:border-slate-700 dark:text-slate-100 dark:hover:border-[#2878FF]"
+            className="inline-flex h-9 items-center gap-1 rounded-lg border border-slate-200 px-2 text-xs font-semibold tracking-wide text-[#071426] transition-colors hover:border-[#2878FF] hover:text-[#2878FF] dark:border-slate-700 dark:text-slate-100 dark:hover:border-[#2878FF] sm:h-10 sm:px-2.5"
           >
             <Globe className="h-3.5 w-3.5 text-[#2878FF]" aria-hidden="true" />
             <span className="uppercase">{language}</span>
@@ -104,7 +121,7 @@ export function Header({ onOpenSearch }: HeaderProps) {
             type="button"
             onClick={toggleTheme}
             aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-slate-700 transition-colors hover:bg-[#F3F5F8] hover:text-[#071426] dark:text-slate-200 dark:hover:bg-[#10233F] dark:hover:text-white"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-700 transition-colors hover:bg-[#F3F5F8] hover:text-[#071426] dark:text-slate-200 dark:hover:bg-[#10233F] dark:hover:text-white sm:h-10 sm:w-10"
           >
             {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </button>
@@ -124,7 +141,7 @@ export function Header({ onOpenSearch }: HeaderProps) {
             onClick={() => setMobileMenuOpen((v) => !v)}
             aria-expanded={mobileMenuOpen}
             aria-label={mobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-slate-700 hover:bg-[#F3F5F8] dark:text-slate-200 dark:hover:bg-[#10233F] lg:hidden"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-700 hover:bg-[#F3F5F8] dark:text-slate-200 dark:hover:bg-[#10233F] sm:h-10 sm:w-10 lg:hidden"
           >
             {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
@@ -161,13 +178,6 @@ export function Header({ onOpenSearch }: HeaderProps) {
               {t.nav.allCategories}
             </a>
           </nav>
-          <a
-            href="/admin"
-            onClick={(e) => handleLinkClick(e, '/admin')}
-            className="whitespace-nowrap shrink-0 text-xs font-medium text-slate-500 hover:text-[#2878FF] dark:text-slate-400"
-          >
-            {t.nav.admin}
-          </a>
         </div>
       </div>
 
@@ -181,7 +191,6 @@ export function Header({ onOpenSearch }: HeaderProps) {
               { label: t.nav.indonesia, path: '/indonesia' },
               { label: t.nav.trending, path: '/search?sort=popular' },
               { label: `${t.nav.bookmarks} (${bookmarks.length})`, path: '/bookmarks' },
-              { label: t.nav.admin, path: '/admin' },
             ].map((item) => (
               <a
                 key={item.path}

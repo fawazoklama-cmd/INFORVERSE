@@ -1,10 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Search } from 'lucide-react';
+import type { DocumentSnapshot } from 'firebase/firestore';
 import type { Article } from '../types/inforverse';
 import { useApp } from '../context/AppContext';
 import { ArticleCard } from '../components/ArticleCard';
 import { SkeletonCard } from '../components/SkeletonCard';
 import { getLocalizedArticleFields } from '../utils/editorial';
+import { loadPublishedArticlesWithFallback } from '../services/firestoreService';
 
 interface CategoryPageProps {
   slug: string;
@@ -14,28 +16,60 @@ export function CategoryPage({ slug }: CategoryPageProps) {
   const { categories, language, navigate, t } = useApp();
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [lastDoc, setLastDoc] = useState<DocumentSnapshot | null>(null);
+  const [hasMore, setHasMore] = useState(false);
   const [query, setQuery] = useState('');
   const [dateFilter, setDateFilter] = useState<'all' | '24h' | '7d' | '30d'>('all');
   const [visibleCount, setVisibleCount] = useState(9);
 
   const category = categories.find((c) => c.slug === slug);
+  const resolvedCategoryId = category?.id || `cat-${slug}`;
 
   useEffect(() => {
     setVisibleCount(9);
+    setLastDoc(null);
+    setHasMore(false);
     const fetchCategory = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`/api/articles?category=${encodeURIComponent(slug)}&limit=100`);
-        if (res.ok) {
-          const data = await res.json();
-          setArticles(data.articles || []);
-        }
+        const res = await loadPublishedArticlesWithFallback({
+          pageSize: 18,
+          categoryId: resolvedCategoryId,
+          categorySlug: slug,
+        });
+        setArticles(res.articles);
+        setLastDoc(res.lastDoc);
+        setHasMore(res.hasMore);
       } finally {
         setLoading(false);
       }
     };
     void fetchCategory();
-  }, [slug]);
+  }, [slug, resolvedCategoryId]);
+
+  const handleLoadMore = async () => {
+    setVisibleCount((c) => c + 6);
+    if (hasMore && lastDoc && !loadingMore) {
+      setLoadingMore(true);
+      try {
+        const res = await loadPublishedArticlesWithFallback({
+          pageSize: 12,
+          cursor: lastDoc,
+          categoryId: resolvedCategoryId,
+          categorySlug: slug,
+        });
+        setArticles((prev) => {
+          const seen = new Set(prev.map((a) => a.id));
+          return [...prev, ...res.articles.filter((a) => !seen.has(a.id))];
+        });
+        setLastDoc(res.lastDoc);
+        setHasMore(res.hasMore);
+      } finally {
+        setLoadingMore(false);
+      }
+    }
+  };
 
   const filtered = useMemo(() => {
     const now = Date.now();
@@ -148,14 +182,15 @@ export function CategoryPage({ slug }: CategoryPageProps) {
               </div>
             )}
 
-            {filtered.length > visibleCount && (
+            {(filtered.length > visibleCount || hasMore) && (
               <div className="pt-4 text-center">
                 <button
                   type="button"
-                  onClick={() => setVisibleCount((c) => c + 6)}
-                  className="rounded-lg border border-slate-300 bg-white px-6 py-2.5 text-sm font-semibold text-[#071426] hover:border-[#2878FF] hover:text-[#2878FF] dark:border-slate-700 dark:bg-[#10233F] dark:text-white"
+                  disabled={loadingMore}
+                  onClick={() => void handleLoadMore()}
+                  className="rounded-lg border border-slate-300 bg-white px-6 py-2.5 text-sm font-semibold text-[#071426] hover:border-[#2878FF] hover:text-[#2878FF] disabled:opacity-60 dark:border-slate-700 dark:bg-[#10233F] dark:text-white"
                 >
-                  {t.category.loadMore}
+                  {loadingMore ? t.common.loading : t.category.loadMore}
                 </button>
               </div>
             )}

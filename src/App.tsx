@@ -3,6 +3,7 @@ import { AppProvider, useApp } from './context/AppContext';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { SearchOverlay } from './components/SearchOverlay';
+import { FirestoreErrorBoundary } from './components/FirestoreErrorBoundary';
 import { HomePage } from './pages/HomePage';
 import { CategoryPage } from './pages/CategoryPage';
 import { WorldPage } from './pages/WorldPage';
@@ -47,7 +48,7 @@ function InforverseShell() {
     if (pathname === '/privacy') return <InfoPage page="privacy" />;
     if (pathname === '/terms') return <InfoPage page="terms" />;
     if (pathname === '/disclaimer') return <InfoPage page="disclaimer" />;
-    if (pathname === '/admin') return <AdminPage />;
+    if (pathname === '/admim') return <AdminPage />;
     return <NotFoundPage />;
   };
 
@@ -88,8 +89,10 @@ function InforverseShell() {
 
 export default function App() {
   return (
-    <AppProvider>
-      <InforverseShell />
-    </AppProvider>
+    <FirestoreErrorBoundary>
+      <AppProvider>
+        <InforverseShell />
+      </AppProvider>
+    </FirestoreErrorBoundary>
   );
 }

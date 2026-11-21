@@ -5,6 +5,7 @@ import { useApp } from '../context/AppContext';
 import { ArticleCard } from '../components/ArticleCard';
 import { SkeletonCard } from '../components/SkeletonCard';
 import { IndonesiaRegionMap } from '../components/IndonesiaRegionMap';
+import { loadPublishedArticlesWithFallback } from '../services/firestoreService';
 
 interface IndonesiaPageProps {
   initialRegionSlug?: string;
@@ -26,11 +27,8 @@ export function IndonesiaPage({ initialRegionSlug }: IndonesiaPageProps) {
     const load = async () => {
       setLoading(true);
       try {
-        const res = await fetch('/api/articles?limit=100');
-        if (res.ok) {
-          const data = await res.json();
-          setArticles(data.articles || []);
-        }
+        const res = await loadPublishedArticlesWithFallback({ pageSize: 100 });
+        setArticles(res.articles);
       } finally {
         setLoading(false);
       }

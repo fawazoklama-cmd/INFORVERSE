@@ -4,6 +4,7 @@ import { useApp } from '../context/AppContext';
 import { ArticleCard } from '../components/ArticleCard';
 import { SkeletonCard } from '../components/SkeletonCard';
 import { InteractiveWorldMap } from '../components/InteractiveWorldMap';
+import { loadPublishedArticlesWithFallback } from '../services/firestoreService';
 
 const CONTINENTS: ContinentName[] = [
   'Asia',
@@ -35,11 +36,8 @@ export function WorldPage() {
     const load = async () => {
       setLoading(true);
       try {
-        const res = await fetch('/api/articles?limit=100');
-        if (res.ok) {
-          const data = await res.json();
-          setArticles(data.articles || []);
-        }
+        const res = await loadPublishedArticlesWithFallback({ pageSize: 100 });
+        setArticles(res.articles);
       } finally {
         setLoading(false);
       }

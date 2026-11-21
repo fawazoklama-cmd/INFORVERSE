@@ -1,11 +1,39 @@
 import crypto from 'node:crypto';
+import fs from 'node:fs';
 import net from 'node:net';
+import path from 'node:path';
 import type { NextFunction, Request, Response } from 'express';
-import { createClient } from '@supabase/supabase-js';
+import { getApp, getApps, initializeApp } from 'firebase-admin/app';
+import { getAuth } from 'firebase-admin/auth';
 
 const RUNTIME_SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex');
+const BOOTSTRAPPED_ADMIN_EMAIL = 'fawazoklama@gmail.com';
+
+function loadFirebaseProjectId(): string | null {
+  if (process.env.FIREBASE_PROJECT_ID) return process.env.FIREBASE_PROJECT_ID;
+  try {
+    const configPath = path.resolve(process.cwd(), 'firebase-applet-config.json');
+    if (fs.existsSync(configPath)) {
+      const parsed = JSON.parse(fs.readFileSync(configPath, 'utf8')) as { projectId?: string };
+      if (parsed.projectId && !parsed.projectId.includes('remixed')) {
+        return parsed.projectId;
+      }
+    }
+  } catch {
+    // Ignore config read failure
+  }
+  return null;
+}
+
+function getFirebaseAdminAuth() {
+  const projectId = loadFirebaseProjectId();
+  if (!projectId) return null;
+  const adminApp = getApps().length ? getApp() : initializeApp({ projectId });
+  return getAuth(adminApp);
+}
 
 export interface AdminSessionPayload {
+  uid?: string;
   email: string;
   role: 'super_admin' | 'admin' | 'editor';
   exp: number;
@@ -51,29 +79,34 @@ export function verifyAdminToken(token: string): AdminSessionPayload | null {
   }
 }
 
-export async function verifySupabaseAdminToken(token: string): Promise<AdminSessionPayload | null> {
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!supabaseUrl || !serviceRoleKey) return null;
-
+export async function verifyFirebaseAdminToken(token: string): Promise<AdminSessionPayload | null> {
   try {
-    const supabase = createClient(supabaseUrl, serviceRoleKey, {
-      auth: { persistSession: false },
-    });
-    const { data, error } = await supabase.auth.getUser(token);
-    if (error || !data?.user?.email) return null;
+    const adminAuth = getFirebaseAdminAuth();
+    if (!adminAuth) return null;
+    const decoded = await adminAuth.verifyIdToken(token);
+    if (!decoded.email || decoded.email_verified !== true) {
+      return null;
+    }
 
-    const { data: profile } = await supabase
-      .from('admin_profiles')
-      .select('email, role')
-      .eq('id', data.user.id)
-      .maybeSingle();
+    const normalizedEmail = decoded.email.toLowerCase();
+    const roleClaim = typeof decoded.role === 'string' ? decoded.role : undefined;
+    const isAdminClaim = decoded.admin === true || roleClaim === 'super_admin' || roleClaim === 'admin';
+    const isBootstrapped = normalizedEmail === BOOTSTRAPPED_ADMIN_EMAIL;
 
-    if (!profile) return null;
+    // Allow verified custom-claim admin OR verified bootstrapped admin email OR verified admin email in ADMIN_EMAILS env
+    const extraEmails = (process.env.ADMIN_EMAIL || '')
+      .split(',')
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean);
+    if (!isAdminClaim && !isBootstrapped && !extraEmails.includes(normalizedEmail)) {
+      return null;
+    }
+
     return {
-      email: profile.email,
-      role: (profile.role as AdminSessionPayload['role']) || 'admin',
-      exp: Math.floor(Date.now() / 1000) + 3600,
+      uid: decoded.uid,
+      email: normalizedEmail,
+      role: (roleClaim as AdminSessionPayload['role']) || (isBootstrapped ? 'super_admin' : 'admin'),
+      exp: decoded.exp || Math.floor(Date.now() / 1000) + 3600,
     };
   } catch {
     return null;
@@ -96,16 +129,17 @@ export async function requireAdmin(
   }
 
   const token = authHeader.slice(7).trim();
-  const localPayload = verifyAdminToken(token);
-  if (localPayload) {
-    req.admin = localPayload;
+
+  const firebasePayload = await verifyFirebaseAdminToken(token);
+  if (firebasePayload) {
+    req.admin = firebasePayload;
     next();
     return;
   }
 
-  const supabasePayload = await verifySupabaseAdminToken(token);
-  if (supabasePayload) {
-    req.admin = supabasePayload;
+  const localPayload = verifyAdminToken(token);
+  if (localPayload) {
+    req.admin = localPayload;
     next();
     return;
   }
@@ -116,19 +150,19 @@ export async function requireAdmin(
 function isPrivateOrLoopbackIp(ip: string): boolean {
   if (net.isIPv4(ip)) {
     const parts = ip.split('.').map(Number);
-    if (parts[0] === 127) return true; // 127.0.0.0/8 loopback
-    if (parts[0] === 10) return true; // 10.0.0.0/8
-    if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true; // 172.16.0.0/12
-    if (parts[0] === 192 && parts[1] === 168) return true; // 192.168.0.0/16
-    if (parts[0] === 169 && parts[1] === 254) return true; // link-local / cloud metadata
+    if (parts[0] === 127) return true;
+    if (parts[0] === 10) return true;
+    if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true;
+    if (parts[0] === 192 && parts[1] === 168) return true;
+    if (parts[0] === 169 && parts[1] === 254) return true;
     if (parts[0] === 0) return true;
     return false;
   }
   if (net.isIPv6(ip)) {
     const lower = ip.toLowerCase();
     if (lower === '::1' || lower === '::') return true;
-    if (lower.startsWith('fc') || lower.startsWith('fd')) return true; // unique local
-    if (lower.startsWith('fe80:')) return true; // link-local
+    if (lower.startsWith('fc') || lower.startsWith('fd')) return true;
+    if (lower.startsWith('fe80:')) return true;
     if (lower.startsWith('::ffff:')) {
       return isPrivateOrLoopbackIp(lower.replace('::ffff:', ''));
     }

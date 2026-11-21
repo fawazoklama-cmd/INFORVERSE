@@ -3,6 +3,7 @@ import { Clock, Search, X } from 'lucide-react';
 import type { Article } from '../types/inforverse';
 import { useApp } from '../context/AppContext';
 import { getLocalizedArticleFields } from '../utils/editorial';
+import { loadPublishedArticlesWithFallback } from '../services/firestoreService';
 
 interface SearchOverlayProps {
   isOpen: boolean;
@@ -24,24 +25,47 @@ export function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
 
   useEffect(() => {
     if (!isOpen) return;
-    const trimmed = query.trim();
+    const trimmed = query.trim().toLowerCase();
     if (!trimmed) {
       setSuggestions([]);
       return;
     }
+    let cancelled = false;
     const timer = setTimeout(async () => {
       setLoading(true);
       try {
-        const res = await fetch(`/api/articles?q=${encodeURIComponent(trimmed)}&limit=6`);
-        if (res.ok) {
-          const data = await res.json();
-          setSuggestions(data.articles || []);
-        }
+        const res = await loadPublishedArticlesWithFallback({ pageSize: 100 });
+        if (cancelled) return;
+        const matched = res.articles
+          .filter((art) => {
+            const haystack = [
+              art.title,
+              art.subtitle,
+              art.summary,
+              art.content,
+              art.source_name,
+              ...(art.tags || []),
+              art.translations?.en?.title || '',
+              art.translations?.en?.summary || '',
+              art.translations?.id?.title || '',
+              art.translations?.id?.summary || '',
+            ]
+              .join(' ')
+              .toLowerCase();
+            return haystack.includes(trimmed);
+          })
+          .slice(0, 6);
+        setSuggestions(matched);
+      } catch {
+        if (!cancelled) setSuggestions([]);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }, 180);
-    return () => clearTimeout(timer);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [query, isOpen]);
 
   if (!isOpen) return null;

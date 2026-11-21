@@ -1,4 +1,4 @@
-# INFORVERSE — Installation, Configuration & Vercel Deployment Guide
+# INFORVERSE — Firebase & Vercel Deployment Guide
 
 ## 1. Local Development Setup
 ```bash
@@ -8,32 +8,49 @@ npm run dev
 ```
 The server starts on `http://localhost:3000`, mounting the Express API and Vite frontend together.
 
-## 2. Supabase PostgreSQL Setup
-1. Create a free project at [supabase.com](https://supabase.com).
-2. Open **SQL Editor** and execute the entire contents of `supabase/schema.sql`. This provisions all 15 tables (`articles`, `categories`, `countries`, `regions`, `sources`, `article_sources`, `article_translations`, `tags`, `article_tags`, `admin_profiles`, `automation_settings`, `automation_logs`, `website_settings`, `visitors_analytics`, `newsletter_subscribers`), foreign keys, indexes, and Row Level Security (RLS) policies.
-3. In **Project Settings → API**, copy:
-   - `SUPABASE_URL`
-   - `SUPABASE_SERVICE_ROLE_KEY` (keep strictly server-side; never expose in `VITE_*` variables)
-   - `VITE_SUPABASE_URL` & `VITE_SUPABASE_ANON_KEY` (optional for client Supabase Auth)
+## 2. Google Firebase Setup
+INFORVERSE uses **Firebase Authentication**, **Cloud Firestore**, **Firebase Storage**, **Firebase App Check**, **Firebase Analytics**, and **Firebase Cloud Functions + Cloud Scheduler** (`firebase-applet-config.json`).
 
-## 3. Creating an Administrator Account
-- **With Supabase Auth**: Create a user in **Authentication → Users**, then insert their `id` and `email` into `public.admin_profiles` (`role = 'super_admin'`).
-- **With Environment Variables**: Set `ADMIN_EMAIL` and `ADMIN_PASSWORD` in `.env` / Vercel Environment Variables.
-- **First-Run Preview Mode**: When `ADMIN_EMAIL` / `ADMIN_PASSWORD` are unset and no admin has been claimed yet, `/admin` displays a one-time Administrator Claim form that securely hashes your chosen password (`scrypt`) on the server and locks setup immediately after claiming.
+### A. Firebase Authentication (Admin Only)
+1. Open **Firebase Console → Authentication → Sign-in method**.
+2. Enable **Email/Password** (and optionally **Google**).
+3. **Do NOT create public admin sign-up forms.** Instead, create administrator accounts directly in **Firebase Console → Authentication → Users** (ensure Email Verified is enabled).
+4. Grant admin privileges in Cloud Firestore:
+   - The bootstrapped owner email (`fawazoklama@gmail.com` with verified email) automatically initializes `admins/{uid}` and `adminProfiles/{uid}` on first login.
+   - To add additional editors or admins, create `admins/{uid}` with `{ "uid": "<uid>", "role": "admin", "active": true }` and `adminProfiles/{uid}`.
+   - Access the protected Administrator Console exclusively via `/admim` (not linked in public navigation).
 
-## 4. Gemini API & News API Configuration
-- **Gemini API**: Obtain a key from Google AI Studio and set `GEMINI_API_KEY`. Used exclusively on the backend (`server/services/gemini.ts`) with model `gemini-4-hydrogen` for summarization, EN↔ID translation, category/country detection, and content analysis.
-- **News API (Optional)**: Obtain an API key from NewsAPI.org / GNews and set `NEWS_API_KEY`.
-- **RSS Feeds**: Add or toggle official RSS/Atom feeds directly in `/admin` → **Sources**.
+### B. Cloud Firestore & Storage Rules
+Deploy hardened security rules and composite indexes via Firebase CLI:
+```bash
+firebase deploy --only firestore:rules,firestore:indexes,storage
+```
+- `firestore.rules` enforces public reads ONLY on published articles/categories/countries/regions and denies all unauthenticated or non-admin writes.
+- `storage.rules` enforces public reads and authenticated admin-only image uploads (JPEG, PNG, WebP, AVIF, SVG ≤ 5 MB) inside `/branding`, `/articles`, `/thumbnails`, and `/categories`.
 
-## 5. Vercel Deployment & Cron Automation
-1. Push your repository to GitHub (ensure `.env` is ignored and no secrets are committed).
-2. Import the repository in Vercel and configure all environment variables from `.env.example`:
+### C. Cloud Functions & Cloud Scheduler (Automated Collection)
+1. Upgrade the Firebase project to the **Blaze** plan (required for outbound HTTP/RSS calls and Cloud Scheduler).
+2. Install Cloud Functions dependencies and set secrets:
+```bash
+cd functions && npm install && cd ..
+firebase functions:secrets:set GEMINI_API_KEY
+firebase functions:secrets:set NEWS_API_KEY
+firebase functions:secrets:set CRON_SECRET
+firebase deploy --only functions
+```
+- `scheduledInformationCollector` runs every **30 minutes** (`Asia/Jakarta`), fetches active RSS/NewsAPI sources, summarizes/translates via `gemini-4-hydrogen`, deduplicates by URL/title, and logs runs to `automationLogs`.
+- `triggerCollectionHttp` allows manual runs authenticated via Firebase Admin ID token or `CRON_SECRET`.
+
+### D. Firebase App Check (Optional reCAPTCHA v3)
+1. Register your domain in **Firebase Console → App Check** with **reCAPTCHA v3**.
+2. Set `VITE_FIREBASE_APPCHECK_SITE_KEY` in `.env` / Vercel Environment Variables.
+
+## 3. Vercel Frontend & Express API Deployment
+1. Push your repository to GitHub (never commit `.env` or service account keys).
+2. Import the repository in Vercel and configure environment variables:
    - `GEMINI_API_KEY`
-   - `SUPABASE_URL`
-   - `SUPABASE_SERVICE_ROLE_KEY`
-   - `CRON_SECRET` (generate a strong random 32+ char string)
-   - `ADMIN_EMAIL` & `ADMIN_PASSWORD`
+   - `NEWS_API_KEY` (optional)
+   - `CRON_SECRET`
    - `APP_URL` (your production `https://...vercel.app` URL)
-3. `vercel.json` is pre-configured to trigger `/api/cron/collect` every 30 minutes (`*/30 * * * *`).
-4. Vercel automatically sends `Authorization: Bearer <CRON_SECRET>` when invoking Cron Jobs, protecting the automated collector from unauthorized browser execution.
+   - `VITE_FIREBASE_APPCHECK_SITE_KEY` (optional)
+3. `vercel.json` is pre-configured to route `/api/*` and trigger `/api/cron/collect` every 30 minutes (`*/30 * * * *`) with `Authorization: Bearer <CRON_SECRET>`.

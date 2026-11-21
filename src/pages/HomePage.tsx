@@ -11,6 +11,10 @@ import {
   getArticleTypeLabel,
   getLocalizedArticleFields,
 } from '../utils/editorial';
+import {
+  loadPublishedArticlesWithFallback,
+  subscribeLatestPublishedArticles,
+} from '../services/firestoreService';
 
 export function HomePage() {
   const { language, categories, countries, websiteSettings, newsletterEnabled, navigate, t } = useApp();
@@ -27,10 +31,8 @@ export function HomePage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/articles?limit=50');
-      if (!res.ok) throw new Error('Failed to load');
-      const data = await res.json();
-      setArticles(data.articles || []);
+      const result = await loadPublishedArticlesWithFallback({ pageSize: 50 });
+      setArticles(result.articles);
     } catch {
       setError(t.common.errorLoad);
     } finally {
@@ -40,6 +42,31 @@ export function HomePage() {
 
   useEffect(() => {
     void loadArticles();
+    const unsubscribe = subscribeLatestPublishedArticles(
+      6,
+      (latest) => {
+        if (latest.length === 0) return;
+        setArticles((prev) => {
+          const byId = new Map(prev.map((a) => [a.id, a]));
+          for (const item of latest) {
+            const existing = byId.get(item.id);
+            byId.set(
+              item.id,
+              existing?.translations && !item.translations
+                ? { ...item, translations: existing.translations }
+                : item
+            );
+          }
+          return Array.from(byId.values()).sort(
+            (a, b) => new Date(b.published_at).getTime() - new Date(a.published_at).getTime()
+          );
+        });
+      },
+      () => {
+        // Non-fatal if offline or unseeded
+      }
+    );
+    return () => unsubscribe();
   }, []);
 
   const sections = websiteSettings?.homepage_sections || {
@@ -55,6 +82,9 @@ export function HomePage() {
   };
 
   const heroArticle = articles.find((a) => a.is_featured) || articles[0];
+  useEffect(() => {
+    setHeroImgError(false);
+  }, [heroArticle?.image_url]);
   const latestArticles = articles.slice(0, 6);
   const indonesiaCountry = countries.find((c) => c.code === 'ID');
   const indonesiaArticles = articles
@@ -80,7 +110,7 @@ export function HomePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email.trim(), language }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setNewsletterMsg({ type: 'err', text: data.error || t.home.newsletterDisabled });
       } else {
