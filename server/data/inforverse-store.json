@@ -1,0 +1,894 @@
+{
+  "categories": [
+    {
+      "id": "cat-world",
+      "slug": "world",
+      "name_en": "World",
+      "name_id": "Dunia",
+      "description_en": "International affairs, diplomacy, and global developments across every continent.",
+      "description_id": "Hubungan internasional, diplomasi, dan perkembangan global di seluruh benua.",
+      "sort_order": 1
+    },
+    {
+      "id": "cat-indonesia",
+      "slug": "indonesia",
+      "name_en": "Indonesia",
+      "name_id": "Indonesia",
+      "description_en": "National policies, infrastructure, and regional updates from across the Indonesian archipelago.",
+      "description_id": "Kebijakan nasional, infrastruktur, dan kabar daerah dari seluruh kepulauan Indonesia.",
+      "sort_order": 2
+    },
+    {
+      "id": "cat-technology",
+      "slug": "technology",
+      "name_en": "Technology",
+      "name_id": "Teknologi",
+      "description_en": "Artificial intelligence, computing architecture, robotics, and digital systems.",
+      "description_id": "Kecerdasan buatan, arsitektur komputasi, robotika, dan sistem digital.",
+      "sort_order": 3
+    },
+    {
+      "id": "cat-science",
+      "slug": "science",
+      "name_en": "Science",
+      "name_id": "Sains",
+      "description_en": "Peer-reviewed breakthroughs, physics, biology, and laboratory discoveries.",
+      "description_id": "Temuan ilmiah, fisika, biologi, dan riset laboratorium terkemuka.",
+      "sort_order": 4
+    },
+    {
+      "id": "cat-economy",
+      "slug": "economy",
+      "name_en": "Economy",
+      "name_id": "Ekonomi",
+      "description_en": "Macroeconomics, central banks, global trade corridors, and industrial markets.",
+      "description_id": "Ekonomi makro, bank sentral, jalur perdagangan global, dan pasar industri.",
+      "sort_order": 5
+    },
+    {
+      "id": "cat-politics",
+      "slug": "politics",
+      "name_en": "Politics",
+      "name_id": "Politik",
+      "description_en": "Governance, legislative decisions, elections, and multilateral treaties.",
+      "description_id": "Tata kelola pemerintahan, keputusan legislatif, pemilu, dan perjanjian multilateral.",
+      "sort_order": 6
+    },
+    {
+      "id": "cat-environment",
+      "slug": "environment",
+      "name_en": "Environment",
+      "name_id": "Lingkungan",
+      "description_en": "Climate science, renewable energy transitions, conservation, and ocean stewardship.",
+      "description_id": "Ilmu iklim, transisi energi terbarukan, konservasi, dan kelestarian laut.",
+      "sort_order": 7
+    },
+    {
+      "id": "cat-education",
+      "slug": "education",
+      "name_en": "Education",
+      "name_id": "Pendidikan",
+      "description_en": "Universities, curriculum reforms, open research initiatives, and literacy.",
+      "description_id": "Universitas, pembaruan kurikulum, riset terbuka, dan literasi global.",
+      "sort_order": 8
+    },
+    {
+      "id": "cat-health",
+      "slug": "health",
+      "name_en": "Health",
+      "name_id": "Kesehatan",
+      "description_en": "Public health policy, biomedical research, epidemiology, and healthcare infrastructure.",
+      "description_id": "Kebijakan kesehatan masyarakat, riset biomedis, epidemiologi, dan fasilitas medis.",
+      "sort_order": 9
+    },
+    {
+      "id": "cat-sports",
+      "slug": "sports",
+      "name_en": "Sports",
+      "name_id": "Olahraga",
+      "description_en": "International tournaments, athletics governance, and regional championships.",
+      "description_id": "Turnamen internasional, tata kelola olahraga, dan kejuaraan regional.",
+      "sort_order": 10
+    },
+    {
+      "id": "cat-space",
+      "slug": "space",
+      "name_en": "Space",
+      "name_id": "Antariksa",
+      "description_en": "Orbital observatories, satellite networks, planetary missions, and launch engineering.",
+      "description_id": "Observatorium orbit, jaringan satelit, misi planet, dan teknik peluncuran.",
+      "sort_order": 11
+    },
+    {
+      "id": "cat-business",
+      "slug": "business",
+      "name_en": "Business",
+      "name_id": "Bisnis",
+      "description_en": "Enterprise strategy, supply chains, startups, and corporate governance.",
+      "description_id": "Strategi perusahaan, rantai pasok, rintisan, dan tata kelola korporasi.",
+      "sort_order": 12
+    },
+    {
+      "id": "cat-culture",
+      "slug": "culture",
+      "name_en": "Culture",
+      "name_id": "Budaya",
+      "description_en": "Heritage preservation, contemporary arts, architecture, and cultural exchange.",
+      "description_id": "Pelestarian warisan, seni kontemporer, arsitektur, dan pertukaran budaya.",
+      "sort_order": 13
+    },
+    {
+      "id": "cat-security",
+      "slug": "security",
+      "name_en": "Security",
+      "name_id": "Keamanan",
+      "description_en": "Cybersecurity infrastructure, maritime safety, and strategic defense analysis.",
+      "description_id": "Keamanan siber, keselamatan maritim, dan analisis pertahanan strategis.",
+      "sort_order": 14
+    },
+    {
+      "id": "cat-disaster",
+      "slug": "disaster",
+      "name_en": "Disaster",
+      "name_id": "Bencana",
+      "description_en": "Early warning systems, seismic monitoring, disaster preparedness, and relief logistics.",
+      "description_id": "Sistem peringatan dini, pemantauan seismik, mitigasi bencana, dan logistik bantuan.",
+      "sort_order": 15
+    },
+    {
+      "id": "cat-innovation",
+      "slug": "innovation",
+      "name_en": "Innovation",
+      "name_id": "Inovasi",
+      "description_en": "Emerging industrial patents, clean-tech prototypes, and applied engineering.",
+      "description_id": "Paten industri baru, purwarupa teknologi bersih, dan rekayasa terapan.",
+      "sort_order": 16
+    }
+  ],
+  "countries": [
+    {
+      "id": "co-id",
+      "code": "ID",
+      "iso_numeric": "360",
+      "name_en": "Indonesia",
+      "name_id": "Indonesia",
+      "continent": "Asia"
+    },
+    {
+      "id": "co-us",
+      "code": "US",
+      "iso_numeric": "840",
+      "name_en": "United States",
+      "name_id": "Amerika Serikat",
+      "continent": "North America"
+    },
+    {
+      "id": "co-gb",
+      "code": "GB",
+      "iso_numeric": "826",
+      "name_en": "United Kingdom",
+      "name_id": "Britania Raya",
+      "continent": "Europe"
+    },
+    {
+      "id": "co-jp",
+      "code": "JP",
+      "iso_numeric": "392",
+      "name_en": "Japan",
+      "name_id": "Jepang",
+      "continent": "Asia"
+    },
+    {
+      "id": "co-de",
+      "code": "DE",
+      "iso_numeric": "276",
+      "name_en": "Germany",
+      "name_id": "Jerman",
+      "continent": "Europe"
+    },
+    {
+      "id": "co-sg",
+      "code": "SG",
+      "iso_numeric": "702",
+      "name_en": "Singapore",
+      "name_id": "Singapura",
+      "continent": "Asia"
+    },
+    {
+      "id": "co-au",
+      "code": "AU",
+      "iso_numeric": "036",
+      "name_en": "Australia",
+      "name_id": "Australia",
+      "continent": "Oceania"
+    },
+    {
+      "id": "co-fr",
+      "code": "FR",
+      "iso_numeric": "250",
+      "name_en": "France",
+      "name_id": "Prancis",
+      "continent": "Europe"
+    },
+    {
+      "id": "co-br",
+      "code": "BR",
+      "iso_numeric": "076",
+      "name_en": "Brazil",
+      "name_id": "Brasil",
+      "continent": "South America"
+    },
+    {
+      "id": "co-za",
+      "code": "ZA",
+      "iso_numeric": "710",
+      "name_en": "South Africa",
+      "name_id": "Afrika Selatan",
+      "continent": "Africa"
+    },
+    {
+      "id": "co-kr",
+      "code": "KR",
+      "iso_numeric": "410",
+      "name_en": "South Korea",
+      "name_id": "Korea Selatan",
+      "continent": "Asia"
+    },
+    {
+      "id": "co-in",
+      "code": "IN",
+      "iso_numeric": "356",
+      "name_en": "India",
+      "name_id": "India",
+      "continent": "Asia"
+    },
+    {
+      "id": "co-ca",
+      "code": "CA",
+      "iso_numeric": "124",
+      "name_en": "Canada",
+      "name_id": "Kanada",
+      "continent": "North America"
+    },
+    {
+      "id": "co-ae",
+      "code": "AE",
+      "iso_numeric": "784",
+      "name_en": "United Arab Emirates",
+      "name_id": "Uni Emirat Arab",
+      "continent": "Asia"
+    },
+    {
+      "id": "co-aq",
+      "code": "AQ",
+      "iso_numeric": "010",
+      "name_en": "Antarctica Research Stations",
+      "name_id": "Stasiun Riset Antarktika",
+      "continent": "Antarctica"
+    }
+  ],
+  "regions": [
+    {
+      "id": "reg-sumatra",
+      "slug": "sumatra",
+      "name_en": "Sumatra",
+      "name_id": "Sumatra",
+      "country_id": "co-id",
+      "provinces": [
+        "Aceh",
+        "Sumatera Utara",
+        "Sumatera Barat",
+        "Riau",
+        "Kepulauan Riau",
+        "Jambi",
+        "Bengkulu",
+        "Sumatera Selatan",
+        "Kepulauan Bangka Belitung",
+        "Lampung"
+      ]
+    },
+    {
+      "id": "reg-jawa",
+      "slug": "jawa",
+      "name_en": "Java",
+      "name_id": "Jawa",
+      "country_id": "co-id",
+      "provinces": [
+        "Banten",
+        "DKI Jakarta",
+        "Jawa Barat",
+        "Jawa Tengah",
+        "DI Yogyakarta",
+        "Jawa Timur"
+      ]
+    },
+    {
+      "id": "reg-kalimantan",
+      "slug": "kalimantan",
+      "name_en": "Kalimantan",
+      "name_id": "Kalimantan",
+      "country_id": "co-id",
+      "provinces": [
+        "Kalimantan Barat",
+        "Kalimantan Tengah",
+        "Kalimantan Selatan",
+        "Kalimantan Timur",
+        "Kalimantan Utara"
+      ]
+    },
+    {
+      "id": "reg-sulawesi",
+      "slug": "sulawesi",
+      "name_en": "Sulawesi",
+      "name_id": "Sulawesi",
+      "country_id": "co-id",
+      "provinces": [
+        "Sulawesi Utara",
+        "Gorontalo",
+        "Sulawesi Tengah",
+        "Sulawesi Barat",
+        "Sulawesi Selatan",
+        "Sulawesi Tenggara"
+      ]
+    },
+    {
+      "id": "reg-bali-nusra",
+      "slug": "bali-nusa-tenggara",
+      "name_en": "Bali & Nusa Tenggara",
+      "name_id": "Bali dan Nusa Tenggara",
+      "country_id": "co-id",
+      "provinces": [
+        "Bali",
+        "Nusa Tenggara Barat",
+        "Nusa Tenggara Timur"
+      ]
+    },
+    {
+      "id": "reg-maluku",
+      "slug": "maluku",
+      "name_en": "Maluku Islands",
+      "name_id": "Maluku",
+      "country_id": "co-id",
+      "provinces": [
+        "Maluku",
+        "Maluku Utara"
+      ]
+    },
+    {
+      "id": "reg-papua",
+      "slug": "papua",
+      "name_en": "Papua",
+      "name_id": "Papua",
+      "country_id": "co-id",
+      "provinces": [
+        "Papua",
+        "Papua Barat",
+        "Papua Selatan",
+        "Papua Tengah",
+        "Papua Pegunungan",
+        "Papua Barat Daya"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "src-bbc-world",
+      "name": "BBC World News RSS",
+      "type": "rss",
+      "url": "https://feeds.bbci.co.uk/news/world/rss.xml",
+      "country_code": "GB",
+      "default_category_slug": "world",
+      "language": "en",
+      "is_active": true,
+      "last_fetched_at": null,
+      "last_status": "idle",
+      "last_error": null,
+      "retry_count": 0,
+      "created_at": "2026-11-20T08:00:00.000Z"
+    },
+    {
+      "id": "src-nasa-breaking",
+      "name": "NASA Breaking News RSS",
+      "type": "research",
+      "url": "https://www.nasa.gov/rss/dyn/breaking_news.rss",
+      "country_code": "US",
+      "default_category_slug": "space",
+      "language": "en",
+      "is_active": true,
+      "last_fetched_at": null,
+      "last_status": "idle",
+      "last_error": null,
+      "retry_count": 0,
+      "created_at": "2026-11-20T08:00:00.000Z"
+    },
+    {
+      "id": "src-antara-news",
+      "name": "ANTARA News Indonesia RSS",
+      "type": "rss",
+      "url": "https://www.antaranews.com/rss/terkini.xml",
+      "country_code": "ID",
+      "default_category_slug": "indonesia",
+      "language": "id",
+      "is_active": true,
+      "last_fetched_at": null,
+      "last_status": "idle",
+      "last_error": null,
+      "retry_count": 0,
+      "created_at": "2026-11-20T08:00:00.000Z"
+    },
+    {
+      "id": "src-bmkg-info",
+      "name": "BMKG Indonesia Warning Feed",
+      "type": "government",
+      "url": "https://data.bmkg.go.id/DataMKG/TEWS/autogempa.xml",
+      "country_code": "ID",
+      "default_category_slug": "disaster",
+      "language": "id",
+      "is_active": false,
+      "last_fetched_at": null,
+      "last_status": "idle",
+      "last_error": null,
+      "retry_count": 0,
+      "created_at": "2026-11-20T08:00:00.000Z"
+    },
+    {
+      "id": "src-newsapi-global",
+      "name": "NewsAPI Global Headlines",
+      "type": "news_api",
+      "url": "https://newsapi.org/v2/top-headlines?language=en&pageSize=10",
+      "country_code": "US",
+      "default_category_slug": "world",
+      "language": "en",
+      "is_active": false,
+      "last_fetched_at": null,
+      "last_status": "idle",
+      "last_error": null,
+      "retry_count": 0,
+      "created_at": "2026-11-20T08:00:00.000Z"
+    }
+  ],
+  "articles": [
+    {
+      "id": "art-1",
+      "title": "Multilateral Forum Advances Cross-Border Digital Trade and Clean Grid Standards",
+      "slug": "multilateral-forum-digital-trade-clean-grid-standards",
+      "subtitle": "Economic ministers and technology delegates outline interoperable customs protocols and grid investment corridors.",
+      "summary": "Delegates from 28 economies convened to establish shared technical standards for cross-border digital documentation, customs clearance, and interconnected renewable power transmission.",
+      "content": "Economic ministers, energy regulators, and digital infrastructure delegates concluded three days of multilateral working sessions focused on streamlining cross-border trade rules and clean power interconnections.\n\nKey working groups emphasized three practical priorities: interoperable electronic bills of lading to shorten port clearance times, harmonized cybersecurity baselines for critical energy grids, and transparent sustainability reporting for industrial supply chains.\n\nRegional observers noted that Southeast Asian and European delegations aligned on pilot corridors linking maritime logistics hubs with verifiable clean-energy certificates, reducing compliance friction for mid-sized exporters.",
+      "image_url": "/src/assets/images/hero_global_summit_1795250512890.jpg",
+      "image_caption": "Delegates during the plenary session on cross-border digital infrastructure standards.",
+      "category_id": "cat-world",
+      "country_id": "co-de",
+      "region_id": null,
+      "province": null,
+      "source_id": null,
+      "source_name": "INFORVERSE International Desk",
+      "source_url": "https://www.wto.org/",
+      "author": "INFORVERSE Editorial Desk",
+      "article_type": "editorial",
+      "requires_verification": false,
+      "is_verified": true,
+      "language": "en",
+      "status": "published",
+      "is_automatic": false,
+      "is_featured": true,
+      "views_count": 4821,
+      "tags": [
+        "Global Trade",
+        "Digital Infrastructure",
+        "Clean Grid"
+      ],
+      "seo_title": "Multilateral Forum Advances Digital Trade & Clean Grid Standards | INFORVERSE",
+      "seo_description": "Delegates from 28 economies outline interoperable digital trade protocols and cross-border renewable grid standards.",
+      "published_at": "2026-11-21T06:30:00.000Z",
+      "updated_at": "2026-11-21T06:30:00.000Z",
+      "created_at": "2026-11-21T06:30:00.000Z",
+      "translations": {
+        "id": {
+          "id": "tr-1-id",
+          "article_id": "art-1",
+          "language": "id",
+          "title": "Forum Multilateral Memperkuat Standar Perdagangan Digital dan Jaringan Listrik Bersih",
+          "subtitle": "Menteri ekonomi dan delegasi teknologi merumuskan protokol kepabeanan yang saling terhubung serta koridor investasi jaringan energi.",
+          "summary": "Delegasi dari 28 negara menyepakati penyusunan standar teknis bersama untuk dokumen perdagangan digital lintas batas, efisiensi pelabuhan, dan interkoneksi transmisi energi terbarukan.",
+          "content": "Para menteri ekonomi, regulator energi, dan delegasi infrastruktur digital menyelesaikan tiga hari sesi kerja multilateral yang berfokus pada penyederhanaan aturan perdagangan lintas batas dan interkoneksi tenaga listrik bersih.\n\nKelompok kerja utama menekankan tiga prioritas praktis: dokumen pengapalan elektronik yang saling terhubung untuk memangkas waktu tunggu pelabuhan, standar dasar keamanan siber bagi jaringan energi kritis, serta pelaporan keberlanjutan yang transparan pada rantai pasok industri.\n\nPengamat kawasan mencatat keselarasan delegasi Asia Tenggara dan Eropa dalam merancang koridor percontohan yang menghubungkan pusat logistik maritim dengan sertifikasi energi bersih yang dapat diverifikasi.",
+          "is_ai_translated": false
+        }
+      }
+    },
+    {
+      "id": "art-2",
+      "title": "Jakarta Expands Integrated Rail Transit and Low-Emission Corridor Across Greater Jabodetabek",
+      "slug": "jakarta-expands-integrated-rail-transit-corridor",
+      "subtitle": "Urban mobility authorities synchronize fare systems and feeder fleets connecting DKI Jakarta, Jawa Barat, and Banten.",
+      "summary": "Metropolitan transit agencies in DKI Jakarta and neighboring Jawa Barat have launched an integrated scheduling and ticketing phase to shorten commuter transfers and curb urban emissions.",
+      "content": "Urban mobility operators across DKI Jakarta, Jawa Barat, and Banten introduced unified intermodal timetable coordination connecting elevated rail lines, commuter trains, and electric feeder buses.\n\nThe operational upgrade targets peak-hour bottlenecks along central business arteries while expanding contactless payment compatibility across municipal networks.\n\nTransport planners reported that synchronized headway intervals have reduced average interchange waiting times during morning and evening commutes, supporting broader regional air-quality targets.",
+      "image_url": "/src/assets/images/indo_jakarta_skyline_1795250511476.jpg",
+      "image_caption": "Elevated transit corridor passing through Jakarta financial district at dusk.",
+      "category_id": "cat-indonesia",
+      "country_id": "co-id",
+      "region_id": "reg-jawa",
+      "province": "DKI Jakarta",
+      "source_id": null,
+      "source_name": "INFORVERSE Indonesia Desk",
+      "source_url": "https://jakarta.go.id/",
+      "author": "Nadia Kusuma",
+      "article_type": "editorial",
+      "requires_verification": false,
+      "is_verified": true,
+      "language": "en",
+      "status": "published",
+      "is_automatic": false,
+      "is_featured": true,
+      "views_count": 3940,
+      "tags": [
+        "Jakarta",
+        "Urban Transit",
+        "Indonesia Infrastructure"
+      ],
+      "seo_title": "Jakarta Expands Integrated Rail Transit Across Jabodetabek | INFORVERSE",
+      "seo_description": "Urban mobility authorities synchronize rail and feeder fleets across DKI Jakarta and Jawa Barat.",
+      "published_at": "2026-11-21T05:15:00.000Z",
+      "updated_at": "2026-11-21T05:15:00.000Z",
+      "created_at": "2026-11-21T05:15:00.000Z",
+      "translations": {
+        "id": {
+          "id": "tr-2-id",
+          "article_id": "art-2",
+          "language": "id",
+          "title": "Jakarta Memperluas Koridor Transit Rel Terpadu dan Transportasi Rendah Emisi di Jabodetabek",
+          "subtitle": "Otoritas mobilitas perkotaan menyinkronkan sistem tarif dan armada pengumpan di DKI Jakarta, Jawa Barat, dan Banten.",
+          "summary": "Pengelola transportasi di DKI Jakarta dan wilayah penyangga Jawa Barat meluncurkan fase integrasi jadwal dan tiket terpadu guna memangkas waktu perpindahan komuter serta menekan emisi perkotaan.",
+          "content": "Operator mobilitas perkotaan di DKI Jakarta, Jawa Barat, dan Banten menghadirkan koordinasi jadwal antarmoda yang menghubungkan jalur rel layang, kereta komuter, dan bus pengumpan listrik.\n\nPembaruan operasional ini menyasar titik kepadatan jam sibuk di koridor bisnis utama sekaligus memperluas kompatibilitas pembayaran nirsentuh di seluruh jaringan transportasi daerah.\n\nPerencana transportasi mencatat bahwa penyelarasan interval keberangkatan telah mengurangi waktu tunggu perpindahan penumpang pada jam berangkat dan pulang kerja.",
+          "is_ai_translated": false
+        }
+      }
+    },
+    {
+      "id": "art-3",
+      "title": "Cryogenic Error-Correction Milestone Improves Fault-Tolerant Quantum Processor Stability",
+      "slug": "cryogenic-error-correction-quantum-processor-stability",
+      "subtitle": "Researchers demonstrate lower logical qubit decoherence rates using modular microwave shielding.",
+      "summary": "Physics teams in Japan and Switzerland published experimental benchmarks showing significant reductions in thermal noise across multi-qubit cryogenic arrays.",
+      "content": "A collaborative photonics and quantum engineering consortium has demonstrated improved logical qubit coherence times inside modular dilution refrigerators.\n\nBy isolating control wiring inside multi-stage cryogenic shielding, the team lowered stray microwave crosstalk during high-frequency gate operations.\n\nWhile large-scale commercial fault-tolerant systems remain years away, independent reviewers noted the architecture offers a scalable blueprint for laboratory testbeds studying materials simulation and molecular modeling.",
+      "image_url": "/src/assets/images/tech_quantum_lab_1795250512205.jpg",
+      "image_caption": "Cryogenic dilution refrigerator assembly inside a quantum computing cleanroom.",
+      "category_id": "cat-technology",
+      "country_id": "co-jp",
+      "region_id": null,
+      "province": null,
+      "source_id": null,
+      "source_name": "INFORVERSE Science & Tech",
+      "source_url": "https://www.nature.com/",
+      "author": "Dr. Kenji Takahashi",
+      "article_type": "original",
+      "requires_verification": false,
+      "is_verified": true,
+      "language": "en",
+      "status": "published",
+      "is_automatic": false,
+      "is_featured": false,
+      "views_count": 3180,
+      "tags": [
+        "Quantum Computing",
+        "Physics",
+        "Semiconductors"
+      ],
+      "seo_title": "Cryogenic Error-Correction Milestone in Quantum Computing | INFORVERSE",
+      "seo_description": "Researchers reduce thermal noise and improve fault-tolerant qubit stability in cryogenic arrays.",
+      "published_at": "2026-11-21T04:10:00.000Z",
+      "updated_at": "2026-11-21T04:10:00.000Z",
+      "created_at": "2026-11-21T04:10:00.000Z",
+      "translations": {
+        "id": {
+          "id": "tr-3-id",
+          "article_id": "art-3",
+          "language": "id",
+          "title": "Terobosan Koreksi Kesalahan Kriogenik Meningkatkan Stabilitas Prosesor Kuantum",
+          "subtitle": "Tim peneliti menunjukkan penurunan laju dekoherensi qubit logis melalui pelindung gelombang mikro modular.",
+          "summary": "Tim fisika di Jepang dan Eropa merilis hasil uji eksperimental yang memperlihatkan penurunan kebisingan termal secara signifikan pada susunan prosesor kuantum kriogenik.",
+          "content": "Konsorsium teknik fotonika dan komputasi kuantum berhasil meningkatkan durasi koherensi qubit logis di dalam sistem pendingin kriogenik modular.\n\nDengan mengisolasi kabel kendali menggunakan pelindung kriogenik bertingkat, tim peneliti menekan gangguan sinyal gelombang mikro selama operasi gerbang logika berkecepatan tinggi.\n\nMeskipun komputer kuantum toleran-kesalahan berskala komersial masih memerlukan waktu pengembangan bertahun-tahun, peninjau independen menilai arsitektur ini memberi landasan penting bagi simulasi material dan pemodelan molekul.",
+          "is_ai_translated": false
+        }
+      }
+    },
+    {
+      "id": "art-4",
+      "title": "Deep-Space Infrared Observatory Completes Segmented Mirror Alignment Ahead of Launch",
+      "slug": "deep-space-infrared-observatory-mirror-alignment",
+      "subtitle": "Aerospace engineers finalize optical calibration tests designed to survey exoplanet atmospheres.",
+      "summary": "Integration teams have completed vacuum thermal and nanometer-scale mirror calibration on a next-generation infrared space telescope scheduled for deep-orbit deployment.",
+      "content": "Aerospace engineers completed final optical alignment inspections on a segmented gold-coated infrared space telescope inside a high-bay integration cleanroom.\n\nThe observatory is engineered to measure faint atmospheric absorption signatures around temperate rocky exoplanets as well as cold interstellar dust formations.\n\nFollowing acoustic vibration checks, the spacecraft will undergo fueling and fairing encapsulation prior to launch window verification.",
+      "image_url": "/src/assets/images/space_orbital_observatory_1795250511424.jpg",
+      "image_caption": "Aerospace integration engineers inspecting a segmented gold-coated optical array.",
+      "category_id": "cat-space",
+      "country_id": "co-us",
+      "region_id": null,
+      "province": null,
+      "source_id": null,
+      "source_name": "INFORVERSE Space Desk",
+      "source_url": "https://www.nasa.gov/",
+      "author": "Elena Vance",
+      "article_type": "editorial",
+      "requires_verification": false,
+      "is_verified": true,
+      "language": "en",
+      "status": "published",
+      "is_automatic": false,
+      "is_featured": false,
+      "views_count": 2890,
+      "tags": [
+        "Space Telescope",
+        "Exoplanets",
+        "Aerospace"
+      ],
+      "seo_title": "Deep-Space Infrared Observatory Completes Mirror Alignment | INFORVERSE",
+      "seo_description": "Aerospace engineers complete optical mirror calibration on an infrared exoplanet observatory.",
+      "published_at": "2026-11-21T02:45:00.000Z",
+      "updated_at": "2026-11-21T02:45:00.000Z",
+      "created_at": "2026-11-21T02:45:00.000Z",
+      "translations": {
+        "id": {
+          "id": "tr-4-id",
+          "article_id": "art-4",
+          "language": "id",
+          "title": "Observatorium Inframerah Antariksa Rampungkan Kalibrasi Cermin Tersegmentasi Jelang Peluncuran",
+          "subtitle": "Insinyur kedirgantaraan menyelesaikan uji optik presisi tinggi untuk meneliti atmosfer eksoplanet.",
+          "summary": "Tim integrasi antariksa telah menuntaskan uji termal vakum dan kalibrasi cermin skala nanometer pada teleskop inframerah generasi baru sebelum penempatan di orbit dalam.",
+          "content": "Para insinyur kedirgantaraan menyelesaikan inspeksi penyelarasan optik tahap akhir pada teleskop inframerah berlapis emas tersegmentasi di ruang bersih integrasi.\n\nObservatorium ini dirancang untuk mengukur spektrum serapan atmosfer di sekitar eksoplanet berbatu maupun formasi debu antarbintang bersuhu dingin.\n\nSetelah melewati uji getaran akustik, wahana akan memasuki tahap pengisian bahan bakar dan penutupan selubung roket.",
+          "is_ai_translated": false
+        }
+      }
+    },
+    {
+      "id": "art-5",
+      "title": "Eastern Indonesia Archipelago Piloting Hybrid Marine Solar Microgrids for Coastal Stations",
+      "slug": "eastern-indonesia-archipelago-hybrid-marine-solar-microgrids",
+      "subtitle": "Research partnerships in Maluku Utara and Papua Barat Daya deploy floating photovoltaic arrays for coastal communities.",
+      "summary": "Marine conservation stations and island clinics in Maluku Utara are testing salt-resistant floating solar platforms paired with battery storage to replace diesel generators.",
+      "content": "Coastal engineering teams working across Maluku Utara and Papua Barat Daya have commissioned hybrid floating solar microgrids designed to power marine monitoring stations, cold-storage fisheries hubs, and island clinics.\n\nBuilt with corrosion-resistant pontoons calibrated for calm tropical bays, the modular arrays reduce reliance on costly shipped diesel fuel.\n\nLocal university researchers are also tracking reef-shade interactions beneath the platforms to ensure marine biodiversity remains undisturbed.",
+      "image_url": "/src/assets/images/env_archipelago_energy_1795250512657.jpg",
+      "image_caption": "Offshore solar microgrid and marine research dock in eastern Indonesian waters.",
+      "category_id": "cat-environment",
+      "country_id": "co-id",
+      "region_id": "reg-maluku",
+      "province": "Maluku Utara",
+      "source_id": null,
+      "source_name": "INFORVERSE Environment Desk",
+      "source_url": "https://www.esdm.go.id/",
+      "author": "Rizal Pratama",
+      "article_type": "editorial",
+      "requires_verification": false,
+      "is_verified": true,
+      "language": "en",
+      "status": "published",
+      "is_automatic": false,
+      "is_featured": false,
+      "views_count": 2540,
+      "tags": [
+        "Renewable Energy",
+        "Marine Conservation",
+        "Maluku Utara"
+      ],
+      "seo_title": "Eastern Indonesia Pilots Hybrid Marine Solar Microgrids | INFORVERSE",
+      "seo_description": "Island stations in Maluku Utara test corrosion-resistant floating solar arrays and battery storage.",
+      "published_at": "2026-11-20T22:15:00.000Z",
+      "updated_at": "2026-11-20T22:15:00.000Z",
+      "created_at": "2026-11-20T22:15:00.000Z",
+      "translations": {
+        "id": {
+          "id": "tr-5-id",
+          "article_id": "art-5",
+          "language": "id",
+          "title": "Kawasan Timur Indonesia Menguji Mikrogrid Surya Maritim Hibrida untuk Stasiun Pesisir",
+          "subtitle": "Kolaborasi riset di Maluku Utara dan Papua Barat Daya memasang panel surya apung bagi fasilitas pesisir.",
+          "summary": "Stasiun konservasi laut dan klinik pulau di Maluku Utara menguji platform surya apung tahan garam yang dipadukan dengan baterai penyimpanan guna mengurangi ketergantungan pada generator diesel.",
+          "content": "Tim rekayasa pesisir di Maluku Utara dan Papua Barat Daya mengoperasikan mikrogrid surya apung hibrida untuk memasok listrik bagi stasiun pemantauan laut, gudang pendingin perikanan, dan klinik pulau.\n\nDirancang dengan ponton tahan korosi untuk teluk tropis yang tenang, susunan panel modular ini menekan biaya distribusi bahan bakar diesel antar-pulau.\n\nPeneliti universitas setempat juga memantau kondisi terumbu karang di sekitar instalasi guna menjaga keseimbangan ekosistem laut.",
+          "is_ai_translated": false
+        }
+      }
+    },
+    {
+      "id": "art-6",
+      "title": "Southeast Asian Central Banks Expand Instant Cross-Border QR Settlement Links",
+      "slug": "southeast-asian-central-banks-instant-qr-settlement",
+      "subtitle": "Indonesia, Singapore, and regional partners widen local-currency retail payment interoperability.",
+      "summary": "Central banks across ASEAN reported record transaction volumes across bilateral QR payment corridors connecting Bank Indonesia, MAS, and neighboring monetary authorities.",
+      "content": "Monetary authorities in Indonesia and Singapore reported steady growth in bilateral instant QR settlements, enabling travelers and small merchants to transact directly in local currencies.\n\nCentral bank officials stated that direct local-currency settlement lowers foreign-exchange conversion spreads and improves transparency for cross-border tourism and micro-enterprises.\n\nTechnical working groups are now evaluating standardized fraud-monitoring APIs across participating payment switches.",
+      "image_url": "/src/assets/images/hero_global_summit_1795250512890.jpg",
+      "image_caption": "Regional financial regulators reviewing cross-border payment settlement benchmarks.",
+      "category_id": "cat-economy",
+      "country_id": "co-sg",
+      "region_id": null,
+      "province": null,
+      "source_id": null,
+      "source_name": "INFORVERSE Economy",
+      "source_url": "https://www.bi.go.id/",
+      "author": "Siti Rahmawati",
+      "article_type": "editorial",
+      "requires_verification": false,
+      "is_verified": true,
+      "language": "en",
+      "status": "published",
+      "is_automatic": false,
+      "is_featured": false,
+      "views_count": 2210,
+      "tags": [
+        "ASEAN Economy",
+        "Fintech",
+        "Local Currency"
+      ],
+      "seo_title": "ASEAN Central Banks Expand Instant Cross-Border QR Links | INFORVERSE",
+      "seo_description": "Indonesia and Singapore widen local-currency retail payment interoperability across ASEAN.",
+      "published_at": "2026-11-20T18:20:00.000Z",
+      "updated_at": "2026-11-20T18:20:00.000Z",
+      "created_at": "2026-11-20T18:20:00.000Z",
+      "translations": {
+        "id": {
+          "id": "tr-6-id",
+          "article_id": "art-6",
+          "language": "id",
+          "title": "Bank Sentral Asia Tenggara Memperluas Interkoneksi Pembayaran QR Lintas Batas",
+          "subtitle": "Indonesia, Singapura, dan mitra kawasan memperluas penyelesaian transaksi ritel berbasis mata uang lokal.",
+          "summary": "Otoritas moneter di ASEAN mencatat kenaikan transaksi pada koridor pembayaran QR bilateral yang menghubungkan sistem pembayaran nasional dalam mata uang lokal.",
+          "content": "Otoritas moneter di Indonesia dan Singapura melaporkan pertumbuhan stabil pada penyelesaian transaksi QR instan bilateral yang memungkinkan wisatawan dan pelaku UMKM bertransaksi langsung dalam mata uang lokal.\n\nPejabat bank sentral menjelaskan bahwa penyelesaian langsung mata uang lokal menekan biaya konversi valuta asing dan meningkatkan transparansi perdagangan ritel kawasan.\n\nKelompok kerja teknis kini meninjau standar API pemantauan penipuan lintas jaringan pembayaran.",
+          "is_ai_translated": false
+        }
+      }
+    },
+    {
+      "id": "art-7",
+      "title": "Kalimantan Timur Forest Monitoring Network Integrates Acoustic Biodiversity Sensors",
+      "slug": "kalimantan-timur-forest-monitoring-acoustic-sensors",
+      "subtitle": "University conservation teams deploy solar-powered bioacoustic nodes to map canopy health.",
+      "summary": "Ecological field researchers in Kalimantan Timur have installed automated acoustic and satellite telemetry nodes to track wildlife movement and detect illegal logging alerts.",
+      "content": "Forestry and conservation researchers in Kalimantan Timur deployed a grid of solar-powered bioacoustic sensors across secondary rainforest corridors.\n\nThe weatherproof nodes record dawn and dusk wildlife vocalizations while cross-referencing canopy disturbance signals with open satellite imagery.\n\nResearchers emphasized that open environmental telemetry supports provincial watershed protection and long-term ecological restoration.",
+      "image_url": "/src/assets/images/env_archipelago_energy_1795250512657.jpg",
+      "image_caption": "Tropical canopy and watershed research zone in Kalimantan Timur.",
+      "category_id": "cat-science",
+      "country_id": "co-id",
+      "region_id": "reg-kalimantan",
+      "province": "Kalimantan Timur",
+      "source_id": null,
+      "source_name": "INFORVERSE Science Desk",
+      "source_url": "https://brin.go.id/",
+      "author": "Dr. Arif Budiman",
+      "article_type": "editorial",
+      "requires_verification": false,
+      "is_verified": true,
+      "language": "en",
+      "status": "published",
+      "is_automatic": false,
+      "is_featured": false,
+      "views_count": 1875,
+      "tags": [
+        "Conservation",
+        "Bioacoustics",
+        "Kalimantan Timur"
+      ],
+      "seo_title": "Kalimantan Timur Integrates Acoustic Biodiversity Sensors | INFORVERSE",
+      "seo_description": "Conservation teams in Kalimantan Timur deploy solar bioacoustic nodes to monitor rainforest health.",
+      "published_at": "2026-11-20T14:00:00.000Z",
+      "updated_at": "2026-11-20T14:00:00.000Z",
+      "created_at": "2026-11-20T14:00:00.000Z",
+      "translations": {
+        "id": {
+          "id": "tr-7-id",
+          "article_id": "art-7",
+          "language": "id",
+          "title": "Jaringan Pemantauan Hutan Kalimantan Timur Mengintegrasikan Sensor Biodiversitas Akustik",
+          "subtitle": "Tim konservasi perguruan tinggi memasang simpul bioakustik bertenaga surya untuk memetakan kesehatan kanopi.",
+          "summary": "Peneliti ekologi lapangan di Kalimantan Timur memasang perangkat sensor akustik otomatis dan telemetri satelit guna memantau satwa liar dan mendeteksi gangguan kawasan hutan.",
+          "content": "Peneliti kehutanan dan konservasi di Kalimantan Timur memasang jaringan sensor bioakustik bertenaga surya di koridor hutan hujan sekunder.\n\nPerangkat tahan cuaca tersebut merekam suara satwa pada waktu fajar dan senja sembari mencocokkan sinyal gangguan tutupan lahan dengan citra satelit terbuka.\n\nData telemetri lingkungan ini digunakan untuk mendukung perlindungan daerah aliran sungai dan pemulihan ekosistem jangka panjang.",
+          "is_ai_translated": false
+        }
+      }
+    },
+    {
+      "id": "art-8",
+      "title": "Global Seismic Agencies Upgrade Real-Time Ocean Buoy Telemetry for Tsunami Early Warning",
+      "slug": "global-seismic-agencies-upgrade-tsunami-buoy-telemetry",
+      "subtitle": "Pacific and Indian Ocean geological institutes standardize open pressure-sensor alert relays.",
+      "summary": "Meteorological and geophysical agencies across the Pacific Rim and Indian Ocean have calibrated upgraded seabed pressure sensors to transmit faster coastal warning bulletins.",
+      "content": "Geophysical monitoring institutes across Australia, Japan, and Indonesia completed a joint calibration drill covering deep-ocean tsunami detection buoys.\n\nUpgraded satellite relays reduce latency between seabed pressure anomalies and national warning centers, giving coastal municipalities vital extra minutes for evacuation verification.\n\nOfficials remind coastal residents to rely strictly on official national meteorological bulletins during seismic events.",
+      "image_url": "/src/assets/images/space_orbital_observatory_1795250511424.jpg",
+      "image_caption": "Precision satellite relay hardware supporting global environmental telemetry.",
+      "category_id": "cat-disaster",
+      "country_id": "co-au",
+      "region_id": null,
+      "province": null,
+      "source_id": null,
+      "source_name": "INFORVERSE Disaster Watch",
+      "source_url": "https://www.unesco.org/",
+      "author": "INFORVERSE Desk",
+      "article_type": "editorial",
+      "requires_verification": true,
+      "is_verified": true,
+      "language": "en",
+      "status": "published",
+      "is_automatic": false,
+      "is_featured": false,
+      "views_count": 1640,
+      "tags": [
+        "Early Warning",
+        "Seismology",
+        "Disaster Preparedness"
+      ],
+      "seo_title": "Global Seismic Agencies Upgrade Tsunami Buoy Telemetry | INFORVERSE",
+      "seo_description": "Pacific and Indian Ocean institutes standardize seabed pressure-sensor relays for faster tsunami warnings.",
+      "published_at": "2026-11-20T10:30:00.000Z",
+      "updated_at": "2026-11-20T10:30:00.000Z",
+      "created_at": "2026-11-20T10:30:00.000Z",
+      "translations": {
+        "id": {
+          "id": "tr-8-id",
+          "article_id": "art-8",
+          "language": "id",
+          "title": "Lembaga Seismik Global Memperbarui Telemetri Pelampung Laut untuk Peringatan Dini Tsunami",
+          "subtitle": "Institusi geologi Samudra Pasifik dan Hindia menyelaraskan sensor tekanan dasar laut berkecepatan tinggi.",
+          "summary": "Badan meteorologi dan geofisika di kawasan Samudra Pasifik dan Hindia menguji sensor tekanan dasar laut generasi baru guna mempercepat penyampaian buletin peringatan pesisir.",
+          "content": "Lembaga pemantau geofisika di Australia, Jepang, dan Indonesia menyelesaikan latihan kalibrasi bersama yang mencakup pelampung deteksi tsunami laut dalam.\n\nRelai satelit yang diperbarui memangkas jeda waktu antara deteksi anomali tekanan dasar laut dan pusat peringatan nasional.\n\nMasyarakat pesisir diimbau untuk selalu merujuk pada buletin resmi badan meteorologi dan geofisika nasional saat terjadi aktivitas seismik.",
+          "is_ai_translated": false
+        }
+      }
+    }
+  ],
+  "automationSettings": {
+    "id": 1,
+    "scheduler_enabled": false,
+    "update_interval_minutes": 30,
+    "auto_publish": false,
+    "ai_summary_enabled": true,
+    "ai_translation_enabled": true,
+    "duplicate_detection_enabled": true,
+    "ai_model": "gemini-4-hydrogen",
+    "summary_length": "medium",
+    "ai_system_prompt": "You are an objective editorial assistant for INFORVERSE. Summarize strictly from provided source facts, never invent quotes or facts, distinguish claims from verified facts, and preserve original context.",
+    "max_retries": 3,
+    "token_usage_total": 0,
+    "last_run_at": null,
+    "next_run_at": null
+  },
+  "websiteSettings": {
+    "id": 1,
+    "site_name": "INFORVERSE",
+    "tagline": "Explore The World, Discover The Information.",
+    "default_language": "auto",
+    "default_theme": "light",
+    "seo_title": "INFORVERSE — Global & Indonesia Information Portal",
+    "seo_description": "Global news, Indonesian regional updates, science, technology, economy, and AI-assisted editorial summaries.",
+    "instagram_url": "https://www.instagram.com/wazzz.dotcom/",
+    "contact_email": "editorial@inforverse.org",
+    "footer_note": "Explore The World, Discover The Information.",
+    "homepage_sections": {
+      "hero": true,
+      "latest": true,
+      "world": true,
+      "indonesia": true,
+      "trending": true,
+      "techScience": true,
+      "worldMap": true,
+      "moreInfo": true,
+      "newsletter": true
+    }
+  },
+  "logs": [
+    {
+      "id": "log-init-1",
+      "log_type": "admin",
+      "status": "info",
+      "source_id": null,
+      "message": "INFORVERSE editorial database initialized with baseline categories, regions, and sources.",
+      "details": {
+        "categories": 16,
+        "countries": 15,
+        "regions": 7
+      },
+      "created_at": "2026-11-21T00:00:00.000Z"
+    }
+  ],
+  "visitorsCount": 1425,
+  "newsletterSubscribers": [],
+  "contactMessages": [],
+  "adminCredential": null
+}

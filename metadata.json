@@ -1,0 +1,6 @@
+{
+  "name": "INFORVERSE",
+  "description": "Global & Indonesia Information Portal — Explore The World, Discover The Information.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
